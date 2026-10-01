@@ -324,12 +324,31 @@ void macOSDisableSystemProxy(macOSProxyType proxyType, const QString &networkSer
     }
 }
 
+QStringList macOSProxyBypassDomains(const QString &bypass)
+{
+    // networksetup takes one argument per domain, and "Empty" clears the list.
+    QStringList domains;
+    for (const QString &domain : bypass.split(';', Qt::SkipEmptyParts))
+    {
+        const QString trimmedDomain = domain.trimmed();
+        if (!trimmedDomain.isEmpty())
+        {
+            domains << trimmedDomain;
+        }
+    }
+    if (domains.isEmpty())
+    {
+        domains << "Empty";
+    }
+    return domains;
+}
+
 void macOSSetProxyBypass(const QString &networkService, const QString &bypass)
 {
     QStringList args;
     args << "-setproxybypassdomains";
     args << networkService;
-    args << bypass;
+    args << macOSProxyBypassDomains(bypass);
     QProcess process;
     process.start(macOSNetworkSetupPath, args);
     process.waitForFinished();
