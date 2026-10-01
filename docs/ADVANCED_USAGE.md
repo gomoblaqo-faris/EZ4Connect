@@ -1,34 +1,34 @@
-# 高级使用方式
+# Advanced usage
 
-## Clash / Mihomo 分流配置
+## Splitting traffic with Clash / Mihomo
 
-若需要使用 Clash、Mihomo 等其他代理软件与本软件配合分流，可以采用以下两种方式之一：
+To use Clash, Mihomo or another proxy app together with EZ4Connect, pick one of two arrangements:
 
-1. **本软件作为主代理**：开启本软件的系统代理功能，将本软件认为不需要代理的流量通过“直连代理”转发给 Clash 或 Mihomo。
-2. **Clash/Mihomo 作为主代理**：关闭本软件的系统代理功能，将需要本软件代理的流量转发到本软件。
+1. **EZ4Connect as the main proxy**: turn on EZ4Connect's system proxy, and let it forward the traffic it does not need to handle to Clash or Mihomo through its direct-connection proxy.
+2. **Clash/Mihomo as the main proxy**: turn off EZ4Connect's system proxy, and have Clash forward the traffic that needs the VPN to EZ4Connect.
 
-以下是具体操作流程：
+The steps for each follow.
 
-### 方式一：本软件作为主代理
+### Option 1: EZ4Connect as the main proxy
 
-- 在“功能”-“设置”-“高级” 页面中设置“直连代理”为 Clash 等软件监听的端口（以 7890 为例 http://127.0.0.1:7890）；
-- 注意勾选“允许外部访问”；
-- 开启本软件的系统代理；
-- 启动 Clash 时不需要打开系统代理或 TUN，即可正确转发流量。
+- In **Settings → Advanced**, set **Direct-connection proxy** to the port Clash (or similar) listens on, for example `http://127.0.0.1:7890`.
+- Make sure **Allow LAN access** is ticked.
+- Turn on EZ4Connect's system proxy.
+- Start Clash without its system proxy or TUN mode; traffic is then forwarded correctly.
 
 <div align="center">
 <img src="proxy_setting.png" width="600px">
 </div>
 
-### 方式二：Clash 作为主代理
+### Option 2: Clash as the main proxy
 
-- 清空本软件的系统代理；
-- 在 “功能”-“设置”-“高级” 页面中设置 SOCK5 的代理端口（以 11080 为例），以下为推荐配置：
+- Clear EZ4Connect's system proxy.
+- In **Settings → Advanced**, set the SOCKS5 proxy port (11080 in this example). The recommended configuration follows.
 
-在 Clash 的代理配置中添加一个代理服务器：
+Add a proxy server to Clash's proxy configuration:
 
 ```yaml
-# 代理服务器
+# Proxy server
 proxies:
   - name: 🖥 EZ4Connect
     type: socks5
@@ -37,53 +37,53 @@ proxies:
     udp: true
 ```
 
-并在代理组中添加一个单独的代理组：
+Add a separate proxy group:
 
 ```yaml
 proxy-groups:
-  - name: "🏫 校园网"
+  - name: "🏫 Campus"
     type: select
     proxies:
       - DIRECT
       - 🖥 EZ4Connect
 ```
 
-并在规则中加入：
+And add these rules:
 
 ```yaml
 rules:
-  - DOMAIN,ids.hit.edu.cn,DIRECT      # 鉴权服务器
-  - DOMAIN,trust.hitsz.edu.cn,DIRECT  # aTrust 服务器
-  - DOMAIN-SUFFIX,hitsz.edu.cn,🏫 校园网
-  - IP-CIDR,10.0.0.0/8,🏫 校园网,no-resolve
-  # 可在此添加其它你需要代理的 ip 段，如课程中心
+  - DOMAIN,ids.hit.edu.cn,DIRECT      # authentication server
+  - DOMAIN,trust.hitsz.edu.cn,DIRECT  # aTrust server
+  - DOMAIN-SUFFIX,hitsz.edu.cn,🏫 Campus
+  - IP-CIDR,10.0.0.0/8,🏫 Campus,no-resolve
+  # Add any other IP ranges you need proxied here, such as the course centre
 ```
 
-这样即可通过简单的切换实现在校外使用本项目时选择 EZ4Connect 代理，在校内使用 DIRECT 直连。
+With this in place a single switch does the job: choose the EZ4Connect proxy when you are off campus, and DIRECT when you are on campus.
 
 <div align="center">
 <img src="proxy_group.png" width="600px">
 </div>
 
-## TUN 模式
+## TUN mode
 
-### Clash 作为主代理
+### Clash as the main proxy
 
-在本方式中，Clash 提供 TUN 虚拟网卡服务，捕获全部流量并将预筛选符合条件的流量发送给 EZ4Connect 代理。
+In this arrangement Clash provides the TUN virtual network adapter. It captures all traffic and sends whatever matches its rules to the EZ4Connect proxy.
 
-EZ4Connect 收到的流量会经过内部分流，将软件需要代理流量（默认为校园网流量）送入 VPN 通道，其余流量直接放行。
+EZ4Connect then splits the traffic it receives internally: what needs the VPN (campus traffic by default) goes into the VPN tunnel, and the rest is let through directly.
 
-**这里需要特别注意**，在 Clash TUN 网卡的作用下，EZ4Connect 送出的流量会再次回到 Clash，因此本方式中**务必设置规则以排除这部分流量**，防止其再次被代理送回 EZ4Connect 引起回环。
+**Take particular care here.** Because of Clash's TUN adapter, the traffic EZ4Connect sends out comes back to Clash. In this arrangement you **must add rules that exclude that traffic**, or it is proxied back to EZ4Connect again and loops.
 
-1. 取消/清空本软件的系统代理，无需设置“直连代理”，注意勾选“允许外部访问”；
-2. 在 Clash 中配置 TUN 相关设置。
+1. Clear EZ4Connect's system proxy. No direct-connection proxy is needed. Make sure **Allow LAN access** is ticked.
+2. Configure TUN in Clash.
 
-推荐配置方式如下：
+The recommended configuration follows.
 
-在 Clash 的代理配置中添加一个代理服务器：
+Add a proxy server to Clash's proxy configuration:
 
 ```yaml
-# 代理服务器
+# Proxy server
 proxies:
   - name: 🖥 EZ4Connect
     type: socks5
@@ -92,64 +92,63 @@ proxies:
     udp: true
 ```
 
-并在代理组中添加一个单独的代理组：
+Add a separate proxy group:
 
 ```yaml
 proxy-groups:
-  - name: "🏫 校园网"
+  - name: "🏫 Campus"
     type: select
     proxies:
       - DIRECT
       - 🖥 EZ4Connect
 ```
 
-并在规则中加入：
+And add these rules:
 
 ```yaml
 rules:
-  - DOMAIN,ids.hit.edu.cn,DIRECT      # 鉴权服务器
-  - DOMAIN,trust.hitsz.edu.cn,DIRECT  # aTrust 服务器
+  - DOMAIN,ids.hit.edu.cn,DIRECT      # authentication server
+  - DOMAIN,trust.hitsz.edu.cn,DIRECT  # aTrust server
   - PROCESS-NAME,zju-connect.exe,DIRECT
   - PROCESS-NAME,EZ4Connect.exe,DIRECT
-  - DOMAIN-SUFFIX,hitsz.edu.cn,🏫 校园网
-  - IP-CIDR,10.0.0.0/8,🏫 校园网,no-resolve
-  # 可在此添加其它你需要代理的 ip 段，如课程中心
+  - DOMAIN-SUFFIX,hitsz.edu.cn,🏫 Campus
+  - IP-CIDR,10.0.0.0/8,🏫 Campus,no-resolve
+  # Add any other IP ranges you need proxied here, such as the course centre
 ```
 
-其中：
+Notes:
 
-- `PROCESS-NAME`精确匹配`EZ4Connect.exe`和`zju-connect.exe`联网核心进程；
-- 上述两类规则在可以正确匹配的情况下选其一或保留两者均可，推荐使用`PROCESS-NAME`。并且**必须**至少放在`DOMAIN-SUFFIX,hitsz.edu.cn,🏫 校园网`之前，以达到放行流量，防止回环的目的。
-- 在较新版本的 EZ4Connect 中，可以通过设置“自动检测网口“来避免回环，此时可以不使用`PROCESS-NAME`规则。
+- `PROCESS-NAME` matches the networking processes `EZ4Connect.exe` and `zju-connect.exe` exactly.
+- As long as they match correctly, you can keep either the `DOMAIN` rules or the `PROCESS-NAME` rules, or both; `PROCESS-NAME` is recommended. They **must** come before `DOMAIN-SUFFIX,hitsz.edu.cn,🏫 Campus`, so that this traffic is let through and cannot loop.
+- Recent versions of EZ4Connect can avoid the loop with the **Auto-detect interface** setting, in which case the `PROCESS-NAME` rules are not needed.
 
-
-最后，还需要在 DNS 配置中为`fake-ip`添加过滤规则，防止 EZ4Connect 的域名解析到 fake-ip 地址，从而无法正确分流。
+Finally, add a `fake-ip` filter to the DNS configuration. Otherwise EZ4Connect's domains resolve to fake-ip addresses and the traffic cannot be split correctly.
 
 ```yaml
 dns:
-  # 仅在使用 fake-ip 时需要配置
+  # Only needed when using fake-ip
   enhanced-mode: fake-ip
   fake-ip-filter:
     - +.hitsz.edu.cn
 ```
 
-如果使用 Clash 的“全局扩展脚本”功能动态修改配置，以下是最小示例，可自行对比修改：
+If you change the configuration dynamically with Clash's global extension script, this is a minimal example to adapt:
 
 ```javascript
 // Define main function (script entry)
 
-// DNS 配置
+// DNS configuration
 const dnsConfig = {
 	"enhanced-mode": "fake-ip",
 	"fake-ip-filter": ["+.hitsz.edu.cn"],
 };
 
 function main(config, profileName) {
-	// 使用先前定义的 DNS 设置（会覆盖整个 dns 对象）
-	// 如果希望增量修改，请自行重写
+	// Use the DNS settings defined above (this replaces the whole dns object).
+	// Rewrite this yourself if you want to change it incrementally.
 	config["dns"] = dnsConfig;
 
-	// 校园网
+	// Campus network
 	config.proxies = config.proxies || [];
 	config["proxy-groups"] = config["proxy-groups"] || [];
 	config.rules = config.rules || [];
@@ -163,7 +162,7 @@ function main(config, profileName) {
 	});
 
 	config["proxy-groups"].push({
-		name: "校园网",
+		name: "Campus",
 		type: "select",
 		proxies: ["DIRECT", "EZ4Connect"],
 	});
@@ -172,13 +171,13 @@ function main(config, profileName) {
 		"DOMAIN,trust.hitsz.edu.cn,DIRECT",
 		"PROCESS-NAME,zju-connect.exe,DIRECT",
 		"PROCESS-NAME,EZ4Connect.exe,DIRECT",
-		"DOMAIN-SUFFIX,hitsz.edu.cn, 校园网",
-		"IP-CIDR,10.0.0.0/8, 校园网,no-resolve",
+		"DOMAIN-SUFFIX,hitsz.edu.cn,Campus",
+		"IP-CIDR,10.0.0.0/8,Campus,no-resolve",
 	);
 
-	// 返回修改好的配置
+	// Return the modified configuration
 	return config;
 }
 ```
 
-额外注意，`tun`的`route-exclude-address`（默认为空）不应加入`10.0.0.0/8`网段，否则会导致流量不能正确经由 tun 转发到 EZ4Connect。
+One more thing: do not add the `10.0.0.0/8` range to `tun`'s `route-exclude-address` (empty by default). If you do, that traffic is not forwarded through the TUN adapter to EZ4Connect.

@@ -42,7 +42,7 @@ Then:
 1. Follow the Setup Guide to configure the server and your account, or configure them by hand in Settings.
 2. Click **Connect** in the main window. If you only need to browse internal sites, click **Set System Proxy** and you are done.
 
-For advanced traffic splitting together with Clash / Mihomo, see [Advanced usage](docs/ADVANCED_USAGE.md) (in Chinese).
+For advanced traffic splitting together with Clash / Mihomo, see [Advanced usage](docs/ADVANCED_USAGE.md).
 
 ## Roadmap
 
@@ -57,7 +57,7 @@ Suggestions are welcome in the Issues or in the OSA group.
 ## Development
 
 The layering, dependency direction and rules for where new code belongs are described in the
-[architecture notes](docs/ARCHITECTURE.md) (in Chinese).
+[architecture notes](docs/ARCHITECTURE.md).
 
 ### Building
 

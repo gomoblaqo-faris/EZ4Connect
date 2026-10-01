@@ -1,19 +1,20 @@
-# 架构说明
+# Architecture
 
-EZ4Connect 使用轻量级分层架构。界面层通过 Coordinator 组合应用服务和平台实现，避免
-`MainWindow` 直接承担连接进程、配置存储及认证窗口的生命周期。
+EZ4Connect uses a lightweight layered architecture. The presentation layer combines application
+services and platform implementations through coordinators, so that `MainWindow` does not itself
+manage the lifecycle of the core process, settings storage or the authentication windows.
 
-## 目录职责
+## What each directory is for
 
 ```text
-core/             连接领域模型与状态机，不依赖界面和平台实现
-application/      用例、会话及基础设施端口
-infrastructure/   QProcess、QSettings、系统代理、文件和更新检查等实现
-presentation/     Qt Widgets 界面、对话框和界面流程 Coordinator
-tests/            按端口或纯逻辑边界测试各层行为
+core/             Connection domain model and state machine; no dependency on the UI or platform code
+application/      Use cases, sessions and the ports implemented by infrastructure
+infrastructure/   QProcess, QSettings, system proxy, files, credential store, update check and other implementations
+presentation/     Qt Widgets UI, dialogs and the coordinators for UI flows
+tests/            Tests of each layer's behaviour at port or pure-logic boundaries
 ```
 
-依赖方向为：
+Dependencies point this way:
 
 ```text
 presentation -> application -> core
@@ -22,22 +23,33 @@ presentation -> application -> core
 infrastructure -------+
 ```
 
-`application` 不引用 `presentation` 或具体的 `infrastructure` 类型。具体实现统一由
-`MainWindowCoordinator` 创建并注入：
+`application` does not reference `presentation` or concrete `infrastructure` types. The concrete
+implementations are all created and injected by `MainWindowCoordinator`:
 
 - `CoreProcess` → `ZjuConnectProcess`
 - `SystemProxyBackend` → `PlatformSystemProxyBackend`
 - `ProfileBackend` → `ProfileManager`
+- `SecretStore` → `KeychainSecretStore` (only when the build includes QtKeychain)
 
-## 主要流程
+Platform code reports failures to its caller as an `OperationStatus`. Only `presentation` shows
+dialogs.
 
-- `MainWindowCoordinator` 是主界面的组合入口，并维护 VPN 与系统代理之间的生命周期联动。
-- `ConnectionUiController` 处理连接、断开、系统代理按钮及错误展示。
-- `AuthDialogCoordinator` 管理登录、sudo、验证码、TOTP 和 SSO 对话框。
-- `ConnectionSession` 负责核心进程、重连和连接状态，不依赖具体 `QProcess` 实现。
-- `ProfileService` 持有当前配置上下文，`SettingsMigrator` 负责配置版本迁移。
+## Main flows
 
-新增代码应按“变化原因”归位：界面行为放入 `presentation`，用例状态放入
-`application`，平台或文件 I/O 放入 `infrastructure`，可独立验证的连接规则放入
-`core`。不要重新引入通用 `utils` 目录；只有跨多个职责且没有明确归属的代码才需要新建
-共享模块。
+- `MainWindowCoordinator` is the composition root for the main window, and maintains the lifecycle
+  link between the VPN and the system proxy.
+- `ConnectionUiController` handles connecting, disconnecting, the system proxy button and showing
+  errors. It also keeps the system proxy on only while the session is connected.
+- `AuthDialogCoordinator` manages the login, sudo, captcha, TOTP and SSO dialogs.
+- `ConnectionSession` is responsible for the core process, reconnecting and the connection state,
+  and does not depend on the concrete `QProcess` implementation.
+- `ProfileService` holds the current profile context, and `SettingsMigrator` migrates between
+  configuration versions.
+- `ProfileSettings` is the single definition of every profile setting: its key, the value a new
+  profile starts with, and the value assumed when the key is missing. It also decides whether a
+  secret lives in the credential store or in the profile file.
+
+Put new code where its reason to change lives: UI behaviour in `presentation`, use-case state in
+`application`, platform or file I/O in `infrastructure`, and connection rules that can be verified
+on their own in `core`. Do not reintroduce a general `utils` directory; create a shared module only
+for code that spans several responsibilities and has no clear owner.
