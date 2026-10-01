@@ -125,6 +125,21 @@ ConnectionUiController::ConnectionUiController(
         this,
         &ConnectionUiController::handleConnectionStateChanged
     );
+    connect(
+        systemProxySession,
+        &SystemProxySession::operationFailed,
+        this,
+        [this](const QString &error)
+        {
+            // Do not retry a proxy that could not be set on every reconnect.
+            if (!this->systemProxySession->isEnabled())
+            {
+                proxyWanted = false;
+            }
+            qWarning().noquote() << error;
+            QMessageBox::critical(this->parentWidget, "System Proxy", error);
+        }
+    );
     // Queued so a proxy operation requested here starts only after the
     // session has finished reporting the previous one.
     connect(

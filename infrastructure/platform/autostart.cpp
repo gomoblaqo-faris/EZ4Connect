@@ -6,7 +6,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QMessageBox>
 #include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
@@ -41,7 +40,7 @@ QString macApplicationBundleName()
 }
 }
 
-void AutoStart::setEnabled(bool enabled)
+OperationStatus AutoStart::setEnabled(bool enabled)
 {
 #if defined(Q_OS_WINDOWS)
     QSettings settings(
@@ -57,30 +56,35 @@ void AutoStart::setEnabled(bool enabled)
         settings.remove(QApplication::applicationName());
     }
     settings.sync();
+    if (settings.status() != QSettings::NoError)
+    {
+        return OperationStatus::failure("Could not update the startup entry in the registry.");
+    }
+    return {};
 #elif defined(Q_OS_MACOS)
     {
         const QStringList arguments{
             "-e",
-            "tell application \"System Events\" to delete login item \"" +
+            // Deleting an item that is already gone is an error in
+            // AppleScript, but it is the state the user asked for.
+            "tell application \"System Events\" to if (exists login item \"" +
+                macApplicationBundleName() + "\") then delete login item \"" +
                 macApplicationBundleName() + "\""
         };
         QProcess process;
         process.start("osascript", arguments);
         process.waitForFinished();
         const QString error = process.readAllStandardError();
+        // When enabling, this only clears a previous entry, which may not exist.
         if (!enabled && process.error() != QProcess::UnknownError)
         {
-            QMessageBox::critical(
-                nullptr,
-                "Failed to Disable Launch at Login",
+            return OperationStatus::failure(
                 "Could not remove the login item: " + process.errorString()
             );
-            return;
         }
         if (!enabled && process.exitCode() != 0)
         {
-            QMessageBox::critical(nullptr, "Failed to Disable Launch at Login", "Could not remove the login item: " + error);
-            return;
+            return OperationStatus::failure("Could not remove the login item: " + error);
         }
     }
     if (enabled)
@@ -95,22 +99,18 @@ void AutoStart::setEnabled(bool enabled)
         process.waitForFinished();
         if (process.error() != QProcess::UnknownError)
         {
-            QMessageBox::critical(
-                nullptr,
-                "Failed to Enable Launch at Login",
+            return OperationStatus::failure(
                 "Could not create the login item: " + process.errorString()
             );
-            return;
         }
         if (process.exitCode() != 0)
         {
-            QMessageBox::critical(
-                nullptr,
-                "Failed to Enable Launch at Login",
+            return OperationStatus::failure(
                 "Could not create the login item: " + process.readAllStandardError()
             );
         }
     }
+    return {};
 #elif defined(Q_OS_LINUX)
     const QString directoryPath =
         QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/autostart/";
@@ -119,34 +119,25 @@ void AutoStart::setEnabled(bool enabled)
 
     if (directory.exists() && desktopFile.exists() && !desktopFile.remove())
     {
-        QMessageBox::critical(
-            nullptr,
-            "Failed to Disable Launch at Login",
+        return OperationStatus::failure(
             "Could not remove the .desktop file: " + desktopFile.fileName()
         );
-        return;
     }
     if (!enabled)
     {
-        return;
+        return {};
     }
     if (!directory.exists() && !directory.mkpath("."))
     {
-        QMessageBox::critical(
-            nullptr,
-            "Failed to Enable Launch at Login",
+        return OperationStatus::failure(
             "Could not create the autostart directory: " + directoryPath
         );
-        return;
     }
     if (!desktopFile.open(QIODevice::WriteOnly | QIODevice::Text))
     {
-        QMessageBox::critical(
-            nullptr,
-            "Failed to Enable Launch at Login",
+        return OperationStatus::failure(
             "Could not create the .desktop file: " + desktopFile.fileName()
         );
-        return;
     }
 
     QTextStream output(&desktopFile);
@@ -155,7 +146,16 @@ void AutoStart::setEnabled(bool enabled)
     output << "Name=" << QApplication::applicationName() << "\n";
     output << "Exec=" << nativeApplicationPath() << "\n";
     output << "X-GNOME-Autostart-enabled=true\n";
+    output.flush();
+    if (output.status() != QTextStream::Ok || !desktopFile.flush())
+    {
+        return OperationStatus::failure(
+            "Could not write the .desktop file: " + desktopFile.fileName()
+        );
+    }
+    return {};
 #else
     Q_UNUSED(enabled)
+    return OperationStatus::failure("Launch at login is not supported on this platform.");
 #endif
 }

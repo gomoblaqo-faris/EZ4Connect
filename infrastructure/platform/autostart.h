@@ -1,9 +1,11 @@
 #ifndef AUTOSTART_H
 #define AUTOSTART_H
 
+#include "application/operationstatus.h"
+
 namespace AutoStart
 {
-void setEnabled(bool enabled);
+OperationStatus setEnabled(bool enabled);
 }
 
 #endif // AUTOSTART_H

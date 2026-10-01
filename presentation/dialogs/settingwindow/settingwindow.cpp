@@ -316,8 +316,23 @@ void SettingWindow::applySettings()
     bool oldAutoStart = profileManager.autoStartEnabled();
     bool newAutoStart = ui->autoStartCheckBox->isChecked();
     if (oldAutoStart != newAutoStart)
-        AutoStart::setEnabled(ui->autoStartCheckBox->isChecked());
-    profileManager.setAutoStartEnabled(newAutoStart);
+    {
+        const OperationStatus status = AutoStart::setEnabled(newAutoStart);
+        if (status.succeeded)
+        {
+            profileManager.setAutoStartEnabled(newAutoStart);
+        }
+        else
+        {
+            QMessageBox::critical(
+                this,
+                newAutoStart
+                    ? "Failed to Enable Launch at Login"
+                    : "Failed to Disable Launch at Login",
+                status.error
+            );
+        }
+    }
     profileManager.setSilentStartEnabled(ui->silentStartCheckBox->isChecked());
 
     settings->setValue("Credential/Username", ui->usernameLineEdit->text());

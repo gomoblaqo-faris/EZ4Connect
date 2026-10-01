@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QSemaphore>
 #include <QSettings>
@@ -63,6 +64,7 @@ struct ProxyCalls
     std::atomic<int> conflictChecks{0};
     std::atomic<int> applies{0};
     std::atomic<int> clears{0};
+    std::atomic<bool> failApply{false};
     // When set, clear() waits here so a test can hold the session busy.
     std::atomic<bool> holdClear{false};
     QSemaphore clearStarted;
@@ -83,13 +85,15 @@ public:
         return false;
     }
 
-    bool apply(const SystemProxyConfig &) override
+    OperationStatus apply(const SystemProxyConfig &) override
     {
         ++calls->applies;
-        return true;
+        return calls->failApply
+            ? OperationStatus::failure("apply failed")
+            : OperationStatus();
     }
 
-    bool clear() override
+    OperationStatus clear() override
     {
         ++calls->clears;
         if (calls->holdClear)
@@ -97,7 +101,7 @@ public:
             calls->clearStarted.release();
             calls->releaseClear.acquire();
         }
-        return true;
+        return {};
     }
 
 private:
@@ -166,6 +170,11 @@ struct Fixture
     QStringList notifications;
     ConnectionUiController controller;
 };
+
+// An error dialog would block a test forever, so the guard in main() closes
+// every dialog and records its message here. Titles are not used because
+// macOS does not show them on message boxes.
+QStringList dialogMessages;
 
 bool waitFor(const std::function<bool()> &condition, int timeoutMs)
 {
@@ -339,6 +348,44 @@ bool appliesAutomaticProxyOnceABusySessionIsFree()
     return true;
 }
 
+bool reportsAProxyThatCouldNotBeSetAndDoesNotRetryIt()
+{
+    Fixture fixture(true, true);
+    fixture.proxyCalls.failApply = true;
+    fixture.connectButton.click();
+    fixture.coreProcess->establishConnection();
+    if (!waitFor([&]() { return dialogMessages.contains("apply failed"); }, 5000)
+        || fixture.proxySession.isEnabled()
+        || fixture.proxyCalls.clears != 1)
+    {
+        qCritical() << "a failed proxy was not reported and rolled back:" << dialogMessages;
+        return false;
+    }
+    // Remove only the expected dialog, so any other one still fails the run.
+    if (dialogMessages.removeAll("apply failed") != 1)
+    {
+        qCritical() << "the proxy failure was reported more than once";
+        return false;
+    }
+    const qsizetype dialogsBeforeReconnect = dialogMessages.size();
+
+    fixture.coreProcess->complete();
+    if (!waitFor([&]() { return fixture.coreProcess->startCalls == 2; }, 5000))
+    {
+        qCritical() << "the core was not restarted";
+        return false;
+    }
+    fixture.coreProcess->establishConnection();
+    processEventsFor(300);
+    if (fixture.proxyCalls.applies != 1
+        || dialogMessages.size() != dialogsBeforeReconnect)
+    {
+        qCritical() << "a proxy that could not be set was retried after reconnecting";
+        return false;
+    }
+    return true;
+}
+
 bool notifiesWhenEstablishedConnectionDropsSilently()
 {
     Fixture fixture(false);
@@ -386,16 +433,15 @@ int main(int argc, char *argv[])
 {
     QApplication application(argc, argv);
 
-    // An error dialog would block the test forever, so dismiss any that
-    // appears and count it as a failure.
-    bool unexpectedDialog = false;
     QTimer dialogGuard;
     QObject::connect(&dialogGuard, &QTimer::timeout, [&]()
     {
         if (QWidget *dialog = QApplication::activeModalWidget())
         {
-            unexpectedDialog = true;
-            qCritical() << "unexpected dialog:" << dialog->windowTitle();
+            const auto *messageBox = qobject_cast<QMessageBox *>(dialog);
+            dialogMessages << (messageBox != nullptr
+                ? messageBox->text()
+                : dialog->windowTitle());
             dialog->close();
         }
     });
@@ -406,7 +452,12 @@ int main(int argc, char *argv[])
         && suspendsProxyWhileReconnecting()
         && keepsProxyOffAfterReconnectWhenUserClearedIt()
         && appliesAutomaticProxyOnceABusySessionIsFree()
+        && reportsAProxyThatCouldNotBeSetAndDoesNotRetryIt()
         && notifiesWhenEstablishedConnectionDropsSilently()
         && requestedDisconnectIsNotReportedAsFailure();
-    return passed && !unexpectedDialog ? 0 : 1;
+    if (!dialogMessages.isEmpty())
+    {
+        qCritical() << "unexpected dialogs:" << dialogMessages;
+    }
+    return passed && dialogMessages.isEmpty() ? 0 : 1;
 }

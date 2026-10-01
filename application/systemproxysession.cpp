@@ -1,5 +1,6 @@
 #include "systemproxysession.h"
 
+#include <QDebug>
 #include <QtConcurrent>
 
 SystemProxySession::SystemProxySession(
@@ -52,7 +53,11 @@ void SystemProxySession::clearBeforeShutdown()
     if (operation != Operation::Disable
         && (enabled || operation == Operation::Enable))
     {
-        backend->clear();
+        const OperationStatus status = backend->clear();
+        if (!status.succeeded)
+        {
+            qWarning().noquote() << status.error;
+        }
     }
 
     currentOperation = Operation::None;
@@ -80,11 +85,30 @@ bool SystemProxySession::startOperation(Operation operation, const SystemProxyCo
                 result.conflict = proxyBackend->hasConflict(config);
                 break;
             case Operation::Enable:
-                result.succeeded = proxyBackend->apply(config);
+            {
+                const OperationStatus status = proxyBackend->apply(config);
+                result.succeeded = status.succeeded;
+                result.error = status.error;
+                if (!status.succeeded)
+                {
+                    // Applying touches several settings in turn, so undo
+                    // whatever part of it went through.
+                    const OperationStatus rollback = proxyBackend->clear();
+                    if (!rollback.succeeded)
+                    {
+                        result.leftPartiallyApplied = true;
+                        result.error += "\n" + rollback.error;
+                    }
+                }
                 break;
+            }
             case Operation::Disable:
-                result.succeeded = proxyBackend->clear();
+            {
+                const OperationStatus status = proxyBackend->clear();
+                result.succeeded = status.succeeded;
+                result.error = status.error;
                 break;
+            }
             case Operation::None:
                 break;
             }
@@ -100,7 +124,11 @@ void SystemProxySession::handleOperationFinished()
     currentOperation = Operation::None;
 
     bool stateChanged = false;
-    if (result.succeeded && result.operation == Operation::Enable && !enabled)
+    // A proxy that is partly applied still has to be cleared, so it counts
+    // as enabled: the user is offered "clear" and shutdown retries it.
+    if ((result.succeeded || result.leftPartiallyApplied)
+        && result.operation == Operation::Enable
+        && !enabled)
     {
         enabled = true;
         stateChanged = true;
@@ -125,5 +153,9 @@ void SystemProxySession::handleOperationFinished()
     else
     {
         emit operationFinished(enabled);
+        if (!result.succeeded)
+        {
+            emit operationFailed(result.error);
+        }
     }
 }

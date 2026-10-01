@@ -1,10 +1,7 @@
-#include <QApplication>
-#include <QCoreApplication>
+#include <QDebug>
 #include <QProcess>
-#include <QMessageBox>
 #include <QSettings>
 #include <QStandardPaths>
-#include <QThread>
 #include "systemproxyfunctions.h"
 
 #if defined(Q_OS_WINDOWS)
@@ -16,32 +13,7 @@
 
 const QString macOSNetworkSetupPath = "/usr/sbin/networksetup";
 
-namespace
-{
-void showProxyError(const QString &title, const QString &message)
-{
-    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-    if (application == nullptr)
-    {
-        qWarning() << title << message;
-        return;
-    }
-
-    if (QThread::currentThread() == application->thread())
-    {
-        QMessageBox::critical(nullptr, title, message);
-        return;
-    }
-
-    QMetaObject::invokeMethod(
-        application,
-        [title, message]() { QMessageBox::critical(nullptr, title, message); },
-        Qt::QueuedConnection
-    );
-}
-}
-
-void windowsSetProxyForAllConnections(const QString &proxyServer, const QString &bypass)
+OperationStatus windowsSetProxyForAllConnections(const QString &proxyServer, const QString &bypass)
 {
 #if defined(Q_OS_WINDOWS)
     INTERNET_PER_CONN_OPTION_LIST optionList;
@@ -67,7 +39,15 @@ void windowsSetProxyForAllConnections(const QString &proxyServer, const QString 
     optionList.dwOptionError = 0;
     optionList.pOptions = optionsArr;
 
-    InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize);
+    // Dial-up entries below are best effort; the default connection decides
+    // whether the change took effect.
+    OperationStatus status;
+    if (!InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize))
+    {
+        status = OperationStatus::failure(
+            QString("InternetSetOption failed with error %1").arg(GetLastError())
+        );
+    }
 
     DWORD dwCb = 0;
     DWORD dwRet = ERROR_SUCCESS;
@@ -83,7 +63,7 @@ void windowsSetProxyForAllConnections(const QString &proxyServer, const QString 
         {
             free(proxyServerWStr);
             free(bypassWStr);
-            return;
+            return status;
         }
         lpRasEntryName[0].dwSize = sizeof(RASENTRYNAME);
 
@@ -103,10 +83,15 @@ void windowsSetProxyForAllConnections(const QString &proxyServer, const QString 
 
     free(proxyServerWStr);
     free(bypassWStr);
+    return status;
+#else
+    Q_UNUSED(proxyServer)
+    Q_UNUSED(bypass)
+    return {};
 #endif
 }
 
-void windowsClearProxyForAllConnections()
+OperationStatus windowsClearProxyForAllConnections()
 {
 #if defined(Q_OS_WINDOWS)
     INTERNET_PER_CONN_OPTION_LIST optionList;
@@ -122,7 +107,15 @@ void windowsClearProxyForAllConnections()
     optionList.dwOptionError = 0;
     optionList.pOptions = optionsArr;
 
-    InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize);
+    // Dial-up entries below are best effort; the default connection decides
+    // whether the change took effect.
+    OperationStatus status;
+    if (!InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize))
+    {
+        status = OperationStatus::failure(
+            QString("InternetSetOption failed with error %1").arg(GetLastError())
+        );
+    }
 
     DWORD dwCb = 0;
     DWORD dwRet = ERROR_SUCCESS;
@@ -135,7 +128,7 @@ void windowsClearProxyForAllConnections()
     {
         lpRasEntryName = (LPRASENTRYNAME)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwCb);
         if (lpRasEntryName == nullptr)
-            return;
+            return status;
         lpRasEntryName[0].dwSize = sizeof(RASENTRYNAME);
 
         dwRet = RasEnumEntries(nullptr, nullptr, lpRasEntryName, &dwCb, &dwEntries);
@@ -151,25 +144,51 @@ void windowsClearProxyForAllConnections()
 
         HeapFree(GetProcessHeap(), 0, lpRasEntryName);
     }
+    return status;
+#else
+    return {};
 #endif
 }
 
-QStringList macOSGetActiveNetworkServices()
+OperationStatus runNetworkSetup(
+    const QStringList &arguments,
+    const QString &failure,
+    QString *output = nullptr
+)
 {
-#if defined(Q_OS_MACOS)
-    QStringList activeServices;
     QProcess process;
-    process.start(macOSNetworkSetupPath, QStringList() << "-listallnetworkservices");
+    process.start(macOSNetworkSetupPath, arguments);
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        showProxyError("Failed to List Network Services", "Command failed: " + process.errorString());
-        return {};
+        return OperationStatus::failure(failure + ": " + process.errorString());
     }
     if (process.exitCode() != 0)
     {
-        showProxyError("Failed to List Network Services", "Could not list network services: " + process.readAllStandardError());
-        return {};
+        // networksetup reports some errors on standard output.
+        const QString details = QString::fromLocal8Bit(
+            process.readAllStandardError() + process.readAllStandardOutput()
+        ).trimmed();
+        return OperationStatus::failure(failure + ": " + details);
+    }
+    if (output != nullptr)
+    {
+        *output = QString::fromLocal8Bit(process.readAllStandardOutput());
+    }
+    return {};
+}
+
+OperationStatus macOSGetActiveNetworkServices(QStringList *activeServices)
+{
+    QString output;
+    const OperationStatus status = runNetworkSetup(
+        {"-listallnetworkservices"},
+        "Could not list network services",
+        &output
+    );
+    if (!status.succeeded)
+    {
+        return status;
     }
     /*
     output will be like this:
@@ -181,7 +200,6 @@ QStringList macOSGetActiveNetworkServices()
     Wi-Fi
     iPhone USB
     */
-    QString output = process.readAllStandardOutput();
     qDebug() << output;
     QStringList lines = output.split('\n');
     lines.removeFirst();
@@ -191,12 +209,9 @@ QStringList macOSGetActiveNetworkServices()
             continue;
         if (line.startsWith("*"))
             continue;
-        activeServices.push_back(line);
+        activeServices->push_back(line);
     }
-    return activeServices;
-#else
     return {};
-#endif
 }
 
 enum class macOSProxyType
@@ -222,20 +237,19 @@ bool macOSIsSystemProxySet(macOSProxyType proxyType, const QString networkServic
         break;
     }
     args << networkService;
-    QProcess process;
-    process.start(macOSNetworkSetupPath, args);
-    process.waitForFinished();
-    if (process.error() != QProcess::UnknownError)
+    QString output;
+    const OperationStatus status = runNetworkSetup(
+        args,
+        "Could not read system proxy settings",
+        &output
+    );
+    if (!status.succeeded)
     {
-        showProxyError("Failed to Read System Proxy Settings", "Command failed: " + process.errorString());
+        // Settings that cannot be read may belong to another app, so ask
+        // before overwriting them.
+        qWarning().noquote() << status.error;
         return true;
     }
-    if (process.exitCode() != 0)
-    {
-        showProxyError("Failed to Read System Proxy Settings", "Could not read system proxy settings: " + process.readAllStandardError());
-        return true;
-    }
-    QString output = process.readAllStandardOutput();
     if (output.contains("Enabled: Yes")) {
         if (output.contains("Server: 127.0.0.1") && output.contains("Port: " + QString::number(port))) {
             return false;
@@ -245,7 +259,7 @@ bool macOSIsSystemProxySet(macOSProxyType proxyType, const QString networkServic
     return false;
 }
 
-void macOSSetSystemProxy(macOSProxyType proxyType, const QString &networkService, const QString &proxyServer, int port)
+OperationStatus macOSSetSystemProxy(macOSProxyType proxyType, const QString &networkService, const QString &proxyServer, int port)
 {
     QStringList setArgs, enableArgs;
     switch (proxyType)
@@ -264,36 +278,22 @@ void macOSSetSystemProxy(macOSProxyType proxyType, const QString &networkService
         break;
     }
     setArgs << networkService << proxyServer << QString::number(port);
-    QProcess setProcess;
-    setProcess.start(macOSNetworkSetupPath, setArgs);
-    setProcess.waitForFinished();
-    if (setProcess.error() != QProcess::UnknownError)
+    const OperationStatus status = runNetworkSetup(
+        setArgs,
+        "Could not set the system proxy for " + networkService
+    );
+    if (!status.succeeded)
     {
-        showProxyError("Failed to Set System Proxy", "Command failed: " + setProcess.errorString());
-        return;
-    }
-    if (setProcess.exitCode() != 0)
-    {
-        showProxyError("Failed to Set System Proxy", "Could not set the system proxy: " + setProcess.readAllStandardError());
-        return;
+        return status;
     }
     enableArgs << networkService << "on";
-    QProcess enableProcess;
-    enableProcess.start(macOSNetworkSetupPath, enableArgs);
-    enableProcess.waitForFinished();
-    if (enableProcess.error() != QProcess::UnknownError)
-    {
-        showProxyError("Failed to Enable System Proxy", "Command failed: " + enableProcess.errorString());
-        return;
-    }
-    if (enableProcess.exitCode() != 0)
-    {
-        showProxyError("Failed to Enable System Proxy", "Could not enable the system proxy: " + enableProcess.readAllStandardError());
-        return;
-    }
+    return runNetworkSetup(
+        enableArgs,
+        "Could not enable the system proxy for " + networkService
+    );
 }
 
-void macOSDisableSystemProxy(macOSProxyType proxyType, const QString &networkService)
+OperationStatus macOSDisableSystemProxy(macOSProxyType proxyType, const QString &networkService)
 {
     QStringList args;
     switch (proxyType)
@@ -309,19 +309,10 @@ void macOSDisableSystemProxy(macOSProxyType proxyType, const QString &networkSer
         break;
     }
     args << networkService << "off";
-    QProcess process;
-    process.start(macOSNetworkSetupPath, args);
-    process.waitForFinished();
-    if (process.error() != QProcess::UnknownError)
-    {
-        showProxyError("Failed to Disable System Proxy", "Command failed: " + process.errorString());
-        return;
-    }
-    if (process.exitCode() != 0)
-    {
-        showProxyError("Failed to Disable System Proxy", "Could not disable the system proxy: " + process.readAllStandardError());
-        return;
-    }
+    return runNetworkSetup(
+        args,
+        "Could not disable the system proxy for " + networkService
+    );
 }
 
 QStringList macOSProxyBypassDomains(const QString &bypass)
@@ -343,193 +334,159 @@ QStringList macOSProxyBypassDomains(const QString &bypass)
     return domains;
 }
 
-void macOSSetProxyBypass(const QString &networkService, const QString &bypass)
+OperationStatus macOSSetProxyBypass(const QString &networkService, const QString &bypass)
 {
     QStringList args;
     args << "-setproxybypassdomains";
     args << networkService;
     args << macOSProxyBypassDomains(bypass);
-    QProcess process;
-    process.start(macOSNetworkSetupPath, args);
-    process.waitForFinished();
-    if (process.error() != QProcess::UnknownError)
-    {
-        showProxyError("Failed to Set Proxy Bypass", "Command failed: " + process.errorString());
-        return;
-    }
-    if (process.exitCode() != 0)
-    {
-        showProxyError("Failed to Set Proxy Bypass", "Could not set proxy bypass domains: " + process.readAllStandardError());
-        return;
-    }
+    return runNetworkSetup(
+        args,
+        "Could not set proxy bypass domains for " + networkService
+    );
 }
 
-using ProcessArgument = QPair<QString, QStringList>;
-
-void linuxSetSystemProxy(const QString &proxyServer, int httpPort, int socksPort, const QString &bypass)
+struct LinuxProxyCommand
 {
-    QList<ProcessArgument> actions;
-    actions << ProcessArgument{"gsettings", {"set", "org.gnome.system.proxy", "mode", "manual"}};
-    //
-    bool isKDE = qEnvironmentVariable("XDG_SESSION_DESKTOP") == "KDE" ||
-                 qEnvironmentVariable("XDG_SESSION_DESKTOP") == "plasma";
-    const auto configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+    QString program;
+    QStringList arguments;
+    // Whether the proxy cannot be considered changed if this command fails.
+    bool required;
+};
 
-    QString KDEver = qEnvironmentVariable("KDE_SESSION_VERSION");
-    QString kwriteconfigName = "kwriteconfig" + KDEver;
-
-    //
-    // Configure HTTP Proxies for HTTP, FTP and HTTPS
-    // if (hasHTTP)
+OperationStatus runLinuxProxyCommands(const QList<LinuxProxyCommand> &commands, const QString &failure)
+{
+    // Run every command even after a failure, so the desktop is left as close
+    // to the requested state as possible.
+    QStringList failedPrograms;
+    for (const LinuxProxyCommand &command : commands)
     {
-        // iterate over protocols...
-        for (const auto &protocol : QStringList{"http", "ftp", "https"})
+        const int exitCode = QProcess::execute(command.program, command.arguments);
+        qDebug() << QStringLiteral("[%1] Program: %2, Args: %3").arg(exitCode).arg(command.program).arg(command.arguments.join(";"));
+        if (exitCode != 0 && command.required && !failedPrograms.contains(command.program))
         {
-            // for GNOME:
-            {
-                actions << ProcessArgument{"gsettings",
-                                           {"set", "org.gnome.system.proxy." + protocol, "host", proxyServer}};
-                actions << ProcessArgument{"gsettings",
-                                           {"set", "org.gnome.system.proxy." + protocol, "port", QString::number(httpPort)}};
-            }
+            failedPrograms << command.program;
+        }
+    }
+    if (failedPrograms.isEmpty())
+    {
+        return {};
+    }
+    return OperationStatus::failure(failure + ": " + failedPrograms.join(", ") + " failed");
+}
 
-            // for KDE:
-            if (isKDE)
-            {
-                actions << ProcessArgument{kwriteconfigName,
-                                           {"--file", configPath + "/kioslaverc", //
-                                            "--group", "Proxy Settings",          //
-                                            "--key", protocol + "Proxy",          //
-                                            "http://" + proxyServer + " " + QString::number(httpPort)}};
-            }
+bool linuxSessionIsKDE()
+{
+    return qEnvironmentVariable("XDG_SESSION_DESKTOP") == "KDE" ||
+           qEnvironmentVariable("XDG_SESSION_DESKTOP") == "plasma";
+}
+
+OperationStatus linuxSetSystemProxy(const QString &proxyServer, int httpPort, int socksPort, const QString &bypass)
+{
+    // A KDE session reads kioslaverc, and gsettings may not even be
+    // installed there, so only the session's own tool has to succeed.
+    const bool isKDE = linuxSessionIsKDE();
+    const bool gnomeRequired = !isKDE;
+    const QString kioslaverc = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/kioslaverc";
+    const QString kwriteconfigName = "kwriteconfig" + qEnvironmentVariable("KDE_SESSION_VERSION");
+
+    QList<LinuxProxyCommand> commands;
+    commands << LinuxProxyCommand{"gsettings", {"set", "org.gnome.system.proxy", "mode", "manual"}, gnomeRequired};
+
+    // Configure HTTP Proxies for HTTP, FTP and HTTPS
+    for (const auto &protocol : QStringList{"http", "ftp", "https"})
+    {
+        commands << LinuxProxyCommand{"gsettings",
+                                      {"set", "org.gnome.system.proxy." + protocol, "host", proxyServer},
+                                      gnomeRequired};
+        commands << LinuxProxyCommand{"gsettings",
+                                      {"set", "org.gnome.system.proxy." + protocol, "port", QString::number(httpPort)},
+                                      gnomeRequired};
+        if (isKDE)
+        {
+            commands << LinuxProxyCommand{kwriteconfigName,
+                                          {"--file", kioslaverc,
+                                           "--group", "Proxy Settings",
+                                           "--key", protocol + "Proxy",
+                                           "http://" + proxyServer + " " + QString::number(httpPort)},
+                                          true};
         }
     }
 
     // Configure SOCKS5 Proxies
-    // if (hasSOCKS)
-    {
-        // for GNOME:
-        {
-            actions << ProcessArgument{"gsettings", {"set", "org.gnome.system.proxy.socks", "host", proxyServer}};
-            actions << ProcessArgument{"gsettings",
-                                       {"set", "org.gnome.system.proxy.socks", "port", QString::number(socksPort)}};
-
-            // for KDE:
-            if (isKDE)
-            {
-                actions << ProcessArgument{kwriteconfigName,
-                                           {"--file", configPath + "/kioslaverc", //
-                                            "--group", "Proxy Settings",          //
-                                            "--key", "socksProxy",                //
-                                            "socks://" + proxyServer + " " + QString::number(socksPort)}};
-            }
-        }
-    }
-    // Setting Proxy Mode to Manual
-    {
-        // for GNOME:
-        {
-            actions << ProcessArgument{"gsettings", {"set", "org.gnome.system.proxy", "mode", "manual"}};
-            QStringList bypassList = bypass.split(";");
-            QString ignoreHosts = "[\"" + bypassList.join("\",\"") + "\"]";
-            actions << ProcessArgument{"gsettings", {"set", "org.gnome.system.proxy", "ignore-hosts", ignoreHosts}};
-        }
-
-        // for KDE:
-        if (isKDE)
-        {
-            actions << ProcessArgument{kwriteconfigName,
-                                       {"--file", configPath + "/kioslaverc", //
-                                        "--group", "Proxy Settings",          //
-                                        "--key", "ProxyType", "1"}};
-            actions << ProcessArgument{kwriteconfigName,
-                                       {"--file", configPath + "/kioslaverc", //
-                                        "--group", "Proxy Settings",          //
-                                        "--key", "NoProxyFor", bypass}};
-        }
-    }
-
-    // Notify kioslaves to reload system proxy configuration.
+    commands << LinuxProxyCommand{"gsettings", {"set", "org.gnome.system.proxy.socks", "host", proxyServer}, gnomeRequired};
+    commands << LinuxProxyCommand{"gsettings",
+                                  {"set", "org.gnome.system.proxy.socks", "port", QString::number(socksPort)},
+                                  gnomeRequired};
     if (isKDE)
     {
-        actions << ProcessArgument{"dbus-send",
-                                   {"--type=signal", "/KIO/Scheduler",                 //
-                                    "org.kde.KIO.Scheduler.reparseSlaveConfiguration", //
-                                    "string:''"}};
-    }
-    // Execute them all!
-    //
-    // note: do not use std::all_of / any_of / none_of,
-    // because those are short-circuit and cannot guarantee atomicity.
-    QList<bool> results;
-    for (const auto &action : actions)
-    {
-        // execute and get the code
-        const auto returnCode = QProcess::execute(action.first, action.second);
-        // print out the commands and result codes
-        qDebug() << QStringLiteral("[%1] Program: %2, Args: %3").arg(returnCode).arg(action.first).arg(action.second.join(";"));
-        // give the code back
-        results << (returnCode == QProcess::NormalExit);
+        commands << LinuxProxyCommand{kwriteconfigName,
+                                      {"--file", kioslaverc,
+                                       "--group", "Proxy Settings",
+                                       "--key", "socksProxy",
+                                       "socks://" + proxyServer + " " + QString::number(socksPort)},
+                                      true};
     }
 
-    if (results.count(true) != actions.size())
+    // Setting Proxy Mode to Manual
+    commands << LinuxProxyCommand{"gsettings", {"set", "org.gnome.system.proxy", "mode", "manual"}, gnomeRequired};
+    const QStringList bypassList = bypass.split(";");
+    const QString ignoreHosts = "[\"" + bypassList.join("\",\"") + "\"]";
+    commands << LinuxProxyCommand{"gsettings", {"set", "org.gnome.system.proxy", "ignore-hosts", ignoreHosts}, gnomeRequired};
+    if (isKDE)
     {
-        showProxyError("Failed to Set System Proxy", "One or more commands failed");
+        commands << LinuxProxyCommand{kwriteconfigName,
+                                      {"--file", kioslaverc,
+                                       "--group", "Proxy Settings",
+                                       "--key", "ProxyType", "1"},
+                                      true};
+        commands << LinuxProxyCommand{kwriteconfigName,
+                                      {"--file", kioslaverc,
+                                       "--group", "Proxy Settings",
+                                       "--key", "NoProxyFor", bypass},
+                                      true};
+        // Notify kioslaves to reload system proxy configuration.
+        commands << LinuxProxyCommand{"dbus-send",
+                                      {"--type=signal", "/KIO/Scheduler",
+                                       "org.kde.KIO.Scheduler.reparseSlaveConfiguration",
+                                       "string:''"},
+                                      false};
     }
+
+    return runLinuxProxyCommands(commands, "Could not set the system proxy");
 }
 
-void linuxClearSystemProxy()
+OperationStatus linuxClearSystemProxy()
 {
-    QList<ProcessArgument> actions;
-    const bool isKDE = qEnvironmentVariable("XDG_SESSION_DESKTOP") == "KDE" ||
-                       qEnvironmentVariable("XDG_SESSION_DESKTOP") == "plasma";
-    const auto configRoot = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
-
-    QString KDEver = qEnvironmentVariable("KDE_SESSION_VERSION");
-    QString kwriteconfigName = "kwriteconfig" + KDEver;
+    const bool isKDE = linuxSessionIsKDE();
+    const QString kioslaverc = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/kioslaverc";
+    const QString kwriteconfigName = "kwriteconfig" + qEnvironmentVariable("KDE_SESSION_VERSION");
 
     // Setting System Proxy Mode to: None
-    {
-        // for GNOME:
-        {
-            actions << ProcessArgument{"gsettings", {"set", "org.gnome.system.proxy", "mode", "none"}};
-        }
-
-        // for KDE:
-        if (isKDE)
-        {
-            actions << ProcessArgument{kwriteconfigName,
-                                       {"--file", configRoot + "/kioslaverc", //
-                                        "--group", "Proxy Settings",          //
-                                        "--key", "ProxyType", "0"}};
-        }
-    }
-
-    // Notify kioslaves to reload system proxy configuration.
+    QList<LinuxProxyCommand> commands;
+    commands << LinuxProxyCommand{"gsettings", {"set", "org.gnome.system.proxy", "mode", "none"}, !isKDE};
     if (isKDE)
     {
-        actions << ProcessArgument{"dbus-send",
-                                   {"--type=signal", "/KIO/Scheduler",                 //
-                                    "org.kde.KIO.Scheduler.reparseSlaveConfiguration", //
-                                    "string:''"}};
+        commands << LinuxProxyCommand{kwriteconfigName,
+                                      {"--file", kioslaverc,
+                                       "--group", "Proxy Settings",
+                                       "--key", "ProxyType", "0"},
+                                      true};
+        // Notify kioslaves to reload system proxy configuration.
+        commands << LinuxProxyCommand{"dbus-send",
+                                      {"--type=signal", "/KIO/Scheduler",
+                                       "org.kde.KIO.Scheduler.reparseSlaveConfiguration",
+                                       "string:''"},
+                                      false};
     }
 
-    // Execute the Actions
-    for (const auto &action : actions)
-    {
-        // execute and get the code
-        const auto returnCode = QProcess::execute(action.first, action.second);
-        // print out the commands and result codes
-        qDebug() << QStringLiteral("[%1] Program: %2, Args: %3").arg(returnCode).arg(action.first).arg(action.second.join(";"));
-    }
+    return runLinuxProxyCommands(commands, "Could not clear the system proxy");
 }
 
 bool linuxIsSystemProxySet(int http_port, int socks_port)
 {
-    const bool isKDE = qEnvironmentVariable("XDG_SESSION_DESKTOP") == "KDE" ||
-                       qEnvironmentVariable("XDG_SESSION_DESKTOP") == "plasma";
-
-    if (isKDE)
+    Q_UNUSED(socks_port)
+    if (linuxSessionIsKDE())
     {
         QString KDEver = qEnvironmentVariable("KDE_SESSION_VERSION");
         QString kreadconfigName = "kreadconfig" + KDEver;
@@ -590,7 +547,13 @@ bool PlatformSystemProxy::isSet(int http_port, int socks_port)
         return false;
     return true;
 #elif defined(Q_OS_MACOS)
-    QStringList activeServices = macOSGetActiveNetworkServices();
+    QStringList activeServices;
+    const OperationStatus status = macOSGetActiveNetworkServices(&activeServices);
+    if (!status.succeeded)
+    {
+        qWarning().noquote() << status.error;
+        return false;
+    }
     for (const QString &service : activeServices)
     {
         if (macOSIsSystemProxySet(macOSProxyType::WebProxy, service, http_port))
@@ -603,43 +566,93 @@ bool PlatformSystemProxy::isSet(int http_port, int socks_port)
     return false;
 #elif defined(Q_OS_LINUX)
     return linuxIsSystemProxySet(http_port, socks_port);
+#else
+    Q_UNUSED(http_port)
+    Q_UNUSED(socks_port)
+    return false;
 #endif
 }
 
-void PlatformSystemProxy::set(int http_port, int socks_port, const QString &bypass)
+OperationStatus PlatformSystemProxy::set(int http_port, int socks_port, const QString &bypass)
 {
 #if defined(Q_OS_WINDOWS)
-    windowsSetProxyForAllConnections(
+    Q_UNUSED(socks_port)
+    return windowsSetProxyForAllConnections(
         "127.0.0.1:" + QString::number(http_port),
         bypass);
 #elif defined(Q_OS_MACOS)
-    QStringList activeServices = macOSGetActiveNetworkServices();
+    QStringList activeServices;
+    OperationStatus status = macOSGetActiveNetworkServices(&activeServices);
+    if (!status.succeeded)
+    {
+        return status;
+    }
+    if (activeServices.isEmpty())
+    {
+        return OperationStatus::failure("Could not set the system proxy: no active network service was found");
+    }
     for (const QString &service : activeServices)
     {
-        macOSSetSystemProxy(macOSProxyType::WebProxy, service, "127.0.0.1", http_port);
-        macOSSetSystemProxy(macOSProxyType::SecureWebProxy, service, "127.0.0.1", http_port);
-        macOSSetSystemProxy(macOSProxyType::SOCKSFirewallProxy, service, "127.0.0.1", socks_port);
-        // macOSDisableSystemProxy(macOSProxyType::SOCKSFirewallProxy, service);
-        macOSSetProxyBypass(service, bypass);
+        status = macOSSetSystemProxy(macOSProxyType::WebProxy, service, "127.0.0.1", http_port);
+        if (status.succeeded)
+        {
+            status = macOSSetSystemProxy(macOSProxyType::SecureWebProxy, service, "127.0.0.1", http_port);
+        }
+        if (status.succeeded)
+        {
+            status = macOSSetSystemProxy(macOSProxyType::SOCKSFirewallProxy, service, "127.0.0.1", socks_port);
+        }
+        if (status.succeeded)
+        {
+            status = macOSSetProxyBypass(service, bypass);
+        }
+        if (!status.succeeded)
+        {
+            return status;
+        }
     }
+    return {};
 #elif defined(Q_OS_LINUX)
-    linuxSetSystemProxy("127.0.0.1", http_port, socks_port, bypass);
+    return linuxSetSystemProxy("127.0.0.1", http_port, socks_port, bypass);
+#else
+    Q_UNUSED(http_port)
+    Q_UNUSED(socks_port)
+    Q_UNUSED(bypass)
+    return OperationStatus::failure("Setting the system proxy is not supported on this platform");
 #endif
 }
 
-void PlatformSystemProxy::clear()
+OperationStatus PlatformSystemProxy::clear()
 {
 #if defined(Q_OS_WINDOWS)
-    windowsClearProxyForAllConnections();
+    return windowsClearProxyForAllConnections();
 #elif defined(Q_OS_MACOS)
-    QStringList activeServices = macOSGetActiveNetworkServices();
+    QStringList activeServices;
+    const OperationStatus listStatus = macOSGetActiveNetworkServices(&activeServices);
+    if (!listStatus.succeeded)
+    {
+        return listStatus;
+    }
+    // Keep going after a failure so as few services as possible are left
+    // pointing at a proxy that is about to stop.
+    OperationStatus firstFailure;
     for (const QString &service : activeServices)
     {
-        macOSDisableSystemProxy(macOSProxyType::WebProxy, service);
-        macOSDisableSystemProxy(macOSProxyType::SecureWebProxy, service);
-        macOSDisableSystemProxy(macOSProxyType::SOCKSFirewallProxy, service);
+        for (const macOSProxyType proxyType : {macOSProxyType::WebProxy,
+                                               macOSProxyType::SecureWebProxy,
+                                               macOSProxyType::SOCKSFirewallProxy})
+        {
+            const OperationStatus status = macOSDisableSystemProxy(proxyType, service);
+            if (!status.succeeded && firstFailure.succeeded)
+            {
+                firstFailure = status;
+            }
+        }
     }
+    return firstFailure;
 #elif defined(Q_OS_LINUX)
-    linuxClearSystemProxy();
+    return linuxClearSystemProxy();
+#else
+    return OperationStatus::failure("Clearing the system proxy is not supported on this platform");
 #endif
 }

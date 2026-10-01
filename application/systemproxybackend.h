@@ -3,6 +3,8 @@
 
 #include <QString>
 
+#include "application/operationstatus.h"
+
 struct SystemProxyConfig
 {
     int httpPort = 0;
@@ -16,8 +18,8 @@ public:
     virtual ~SystemProxyBackend() = default;
 
     virtual bool hasConflict(const SystemProxyConfig &config) = 0;
-    virtual bool apply(const SystemProxyConfig &config) = 0;
-    virtual bool clear() = 0;
+    virtual OperationStatus apply(const SystemProxyConfig &config) = 0;
+    virtual OperationStatus clear() = 0;
 };
 
 #endif // SYSTEMPROXYBACKEND_H

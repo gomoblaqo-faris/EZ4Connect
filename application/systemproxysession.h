@@ -28,6 +28,8 @@ signals:
     void busyChanged(bool busy);
     void conflictCheckFinished(bool conflict);
     void operationFinished(bool enabled);
+    // Emitted after operationFinished when enabling or clearing did not work.
+    void operationFailed(const QString &error);
 
 private:
     enum class Operation
@@ -43,6 +45,10 @@ private:
         Operation operation;
         bool conflict = false;
         bool succeeded = true;
+        // Set when a failed enable could not be undone either, so some
+        // settings may still point at the proxy.
+        bool leftPartiallyApplied = false;
+        QString error;
     };
 
     bool startOperation(Operation operation, const SystemProxyConfig &config = {});

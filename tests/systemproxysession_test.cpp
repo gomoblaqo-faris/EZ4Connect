@@ -31,19 +31,19 @@ public:
         return conflict;
     }
 
-    bool apply(const SystemProxyConfig &config) override
+    OperationStatus apply(const SystemProxyConfig &config) override
     {
         ++applyCalls;
         lastConfig = config;
         operationStarted.release();
         allowOperationToFinish.acquire();
-        return applySucceeds;
+        return applySucceeds ? OperationStatus() : OperationStatus::failure("apply failed");
     }
 
-    bool clear() override
+    OperationStatus clear() override
     {
         ++clearCalls;
-        return clearSucceeds;
+        return clearSucceeds ? OperationStatus() : OperationStatus::failure("clear failed");
     }
 };
 
@@ -119,6 +119,10 @@ bool delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState()
         return false;
     }
 
+    QStringList failures;
+    QObject::connect(&session, &SystemProxySession::operationFailed,
+                     [&](const QString &error) { failures << error; });
+
     fake->applySucceeds = false;
     if (!session.enable(config)
         || !fake->operationStarted.tryAcquire(1, 1000))
@@ -130,6 +134,11 @@ bool delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState()
     if (!waitUntil([&]() { return !session.isBusy(); }) || session.isEnabled())
     {
         qCritical() << "failed enable must not change owned state";
+        return false;
+    }
+    if (failures != QStringList{"apply failed"} || fake->clearCalls != 3)
+    {
+        qCritical() << "failed enable must be reported and rolled back:" << failures;
         return false;
     }
     fake->applySucceeds = true;
@@ -145,9 +154,72 @@ bool delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState()
     if (session.isBusy()
         || session.isEnabled()
         || fake->applyCalls != 3
-        || fake->clearCalls != 3)
+        || fake->clearCalls != 4)
     {
         qCritical() << "clearBeforeShutdown must clear an in-flight enable";
+        return false;
+    }
+    return true;
+}
+
+bool failedClearKeepsTheProxyMarkedAsEnabled()
+{
+    auto backend = std::make_unique<FakeSystemProxyBackend>();
+    FakeSystemProxyBackend *fake = backend.get();
+    SystemProxySession session(std::move(backend));
+    QStringList failures;
+    QObject::connect(&session, &SystemProxySession::operationFailed,
+                     [&](const QString &error) { failures << error; });
+
+    fake->allowOperationToFinish.release();
+    if (!session.enable({1081, 1080, QString()})
+        || !waitUntil([&]() { return !session.isBusy(); })
+        || !session.isEnabled())
+    {
+        qCritical() << "failedClearKeepsTheProxyMarkedAsEnabled could not enable";
+        return false;
+    }
+
+    // The user must still be offered "clear" after a failed attempt.
+    fake->clearSucceeds = false;
+    if (!session.disable()
+        || !waitUntil([&]() { return !session.isBusy(); })
+        || !session.isEnabled()
+        || failures != QStringList{"clear failed"})
+    {
+        qCritical() << "a failed clear was treated as success:" << failures;
+        return false;
+    }
+    return true;
+}
+
+bool failedRollbackLeavesTheProxyToBeCleared()
+{
+    auto backend = std::make_unique<FakeSystemProxyBackend>();
+    FakeSystemProxyBackend *fake = backend.get();
+    SystemProxySession session(std::move(backend));
+    QStringList failures;
+    QObject::connect(&session, &SystemProxySession::operationFailed,
+                     [&](const QString &error) { failures << error; });
+
+    fake->applySucceeds = false;
+    fake->clearSucceeds = false;
+    fake->allowOperationToFinish.release();
+    if (!session.enable({1081, 1080, QString()})
+        || !waitUntil([&]() { return !session.isBusy(); })
+        || !session.isEnabled()
+        || failures != QStringList{"apply failed\nclear failed"})
+    {
+        qCritical() << "a partly applied proxy was forgotten:" << failures;
+        return false;
+    }
+
+    // Shutdown must try again rather than assume nothing was applied.
+    fake->clearSucceeds = true;
+    session.clearBeforeShutdown();
+    if (fake->clearCalls != 2 || session.isEnabled())
+    {
+        qCritical() << "shutdown did not retry clearing a partly applied proxy";
         return false;
     }
     return true;
@@ -157,5 +229,7 @@ bool delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState()
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    return delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState() ? 0 : 1;
+    return delegatesPlatformOperationsAsynchronouslyAndTracksOwnedState()
+        && failedClearKeepsTheProxyMarkedAsEnabled()
+        && failedRollbackLeavesTheProxyToBeCleared() ? 0 : 1;
 }

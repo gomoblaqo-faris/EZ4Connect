@@ -7,14 +7,12 @@ bool PlatformSystemProxyBackend::hasConflict(const SystemProxyConfig &config)
     return PlatformSystemProxy::isSet(config.httpPort, config.socksPort);
 }
 
-bool PlatformSystemProxyBackend::apply(const SystemProxyConfig &config)
+OperationStatus PlatformSystemProxyBackend::apply(const SystemProxyConfig &config)
 {
-    PlatformSystemProxy::set(config.httpPort, config.socksPort, config.bypass);
-    return true;
+    return PlatformSystemProxy::set(config.httpPort, config.socksPort, config.bypass);
 }
 
-bool PlatformSystemProxyBackend::clear()
+OperationStatus PlatformSystemProxyBackend::clear()
 {
-    PlatformSystemProxy::clear();
-    return true;
+    return PlatformSystemProxy::clear();
 }
