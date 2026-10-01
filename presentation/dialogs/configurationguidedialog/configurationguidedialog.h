@@ -93,6 +93,11 @@ private:
     QString selectedAuthType;
     QString selectedLoginDomain;
     QString selectedLoginUrl;
+
+    // What the secret fields were filled with, to tell which ones changed.
+    QString loadedPassword;
+    QString loadedTotpSecret;
+    QString loadedCertPassword;
 };
 
 #endif // CONFIGURATIONGUIDEDIALOG_H

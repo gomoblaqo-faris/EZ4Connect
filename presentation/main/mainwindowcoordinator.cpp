@@ -2,11 +2,17 @@
 
 #include <memory>
 
+#include "application/applicationconstants.h"
 #include "application/connectionsession.h"
 #include "application/profileservice.h"
+#include "application/profilesettings.h"
+#include "application/secretstore.h"
 #include "application/systemproxysession.h"
 #include "infrastructure/coreprocess/zjuconnectprocess.h"
 #include "infrastructure/platform/platformsystemproxybackend.h"
+#ifdef EZ4CONNECT_HAS_KEYCHAIN
+#include "infrastructure/secrets/keychainsecretstore.h"
+#endif
 #include "infrastructure/settings/profilemanager.h"
 #include "infrastructure/update/updatechecker.h"
 #include "presentation/coordinators/authdialogcoordinator.h"
@@ -34,6 +40,13 @@ MainWindowCoordinator::MainWindowCoordinator(
           this
       ))
 {
+#ifdef EZ4CONNECT_HAS_KEYCHAIN
+    secretStore = std::make_unique<KeychainSecretStore>(
+        ApplicationConstants::ApplicationName
+    );
+#endif
+    ProfileSettings::setSecretStore(secretStore.get());
+
     connect(
         connectionSession,
         &ConnectionSession::askSudoPass,
@@ -119,6 +132,11 @@ MainWindowCoordinator::MainWindowCoordinator(
             }
         }
     );
+}
+
+MainWindowCoordinator::~MainWindowCoordinator()
+{
+    ProfileSettings::setSecretStore(nullptr);
 }
 
 ProfileService *MainWindowCoordinator::profiles() const

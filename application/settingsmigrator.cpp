@@ -34,6 +34,7 @@ void SettingsMigrator::finish(QSettings &settings, bool resetToDefaults)
 {
     if (resetToDefaults)
     {
+        ProfileSettings::forgetSecrets(settings);
         settings.clear();
         DefaultSettings::reset(settings);
     }

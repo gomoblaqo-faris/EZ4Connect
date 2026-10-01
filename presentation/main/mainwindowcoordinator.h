@@ -3,9 +3,12 @@
 
 #include <QObject>
 
+#include <memory>
+
 class AuthDialogCoordinator;
 class ConnectionSession;
 class ProfileService;
+class SecretStore;
 class SystemProxySession;
 class UpdateChecker;
 class QWidget;
@@ -27,9 +30,12 @@ public:
     UpdateChecker *updates() const;
     AuthDialogCoordinator *authenticationDialogs() const;
 
+    ~MainWindowCoordinator() override;
+
     void prepareForShutdown();
 
 private:
+    std::unique_ptr<SecretStore> secretStore;
     ProfileService *profileService;
     ConnectionSession *connectionSession;
     SystemProxySession *systemProxySession;

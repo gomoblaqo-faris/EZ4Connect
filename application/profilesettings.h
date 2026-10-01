@@ -1,11 +1,12 @@
 #ifndef PROFILESETTINGS_H
 #define PROFILESETTINGS_H
 
-#include <QByteArray>
 #include <QSettings>
 #include <QString>
 
 #include "application/applicationconstants.h"
+
+class SecretStore;
 
 // The single definition of every setting stored in a profile's INI file:
 // its key, the value a new profile starts with, and the value assumed when
@@ -37,19 +38,25 @@ struct Key
     T fallback;
 };
 
-// A setting that is stored encoded. A separate type keeps it from being read
-// or written as plain text by mistake.
+// A secret. A separate type keeps it from being read or written as an
+// ordinary setting: it lives in the system credential store when there is
+// one, and in the profile file otherwise.
 struct SecretKey
 {
     const char *name;
+    // How the value is kept when it has to stay in the profile file.
+    bool base64InFile;
 };
 
 // Credentials
 inline const Key<QString> Username{"Credential/Username", ""};
-inline const SecretKey Password{"Credential/Password"};
-inline const Key<QString> TOTPSecret{"Credential/TOTPSecret", ""};
+inline const SecretKey Password{"Credential/Password", true};
+inline const SecretKey TOTPSecret{"Credential/TOTPSecret", false};
 inline const Key<QString> CertFile{"Credential/CertFile", ""};
-inline const SecretKey CertPassword{"Credential/CertPassword"};
+inline const SecretKey CertPassword{"Credential/CertPassword", true};
+// Names this profile's entries in the system credential store. It stays the
+// same when the profile is renamed.
+inline const Key<QString> SecretId{"Credential/SecretId", ""};
 
 // Application behaviour
 inline const Key<int> ConfigVersion{
@@ -152,17 +159,35 @@ bool contains(const QSettings &settings, const Key<T> &key)
     return settings.contains(key.name);
 }
 
-inline QString read(const QSettings &settings, const SecretKey &key)
-{
-    return QString::fromUtf8(
-        QByteArray::fromBase64(settings.value(key.name).toString().toUtf8())
-    );
-}
+// Without a store, or with nullptr, secrets stay in the profile file. The
+// store is not owned and must outlive every later call.
+void setSecretStore(SecretStore *store);
 
-inline void write(QSettings &settings, const SecretKey &key, const QString &secret)
-{
-    settings.setValue(key.name, QString::fromLatin1(secret.toUtf8().toBase64()));
-}
+bool usesSecretStore();
+
+QString read(const QSettings &settings, const SecretKey &key);
+void write(QSettings &settings, const SecretKey &key, const QString &secret);
+// For forms: writes only a secret the user changed. A secret that could not
+// be read shows up empty, and writing that back would erase the stored one.
+void writeIfChanged(
+    QSettings &settings,
+    const SecretKey &key,
+    const QString &loaded,
+    const QString &current
+);
+
+// Moves secrets that are still in the profile file into the store.
+void migrateSecrets(QSettings &settings);
+// Removes a profile's secrets from the store, before the profile is deleted
+// or its settings are cleared. False means some of them are still there.
+bool forgetSecrets(QSettings &settings);
+bool forgetSecrets(const QString &secretId);
+// Removes everything that must not leave this machine from a copy of a
+// profile file: the secrets and the identifier of their store entries.
+void stripSecrets(QSettings &exportedCopy);
+// Gives a profile file that was copied from another profile its own copies
+// of that profile's secrets, so that editing one does not change the other.
+void detachSecrets(QSettings &settings);
 
 // Profiles saved before the authentication type was stored used certificate
 // authentication exactly when a certificate file was configured.

@@ -43,6 +43,7 @@ set(SOURCE_FILES
     application/coreprocess.h
     application/connectionsession.cpp
     application/profileservice.cpp
+    application/profilesettings.cpp
     application/settingsmigrator.cpp
     application/systemproxysession.cpp
     application/defaultsettings.cpp
@@ -75,6 +76,16 @@ set(SOURCE_FILES
     infrastructure/settings/profilemanager.cpp
     resource.qrc
 )
+
+# Saved passwords go to the system credential store when QtKeychain is
+# installed. Without it they stay in the profile file, as before.
+find_package(Qt6Keychain QUIET)
+if(Qt6Keychain_FOUND)
+    message("Credential storage: system keychain (QtKeychain)")
+    list(APPEND SOURCE_FILES infrastructure/secrets/keychainsecretstore.cpp)
+else()
+    message("Credential storage: profile file (QtKeychain not found)")
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -132,6 +143,11 @@ target_link_libraries(${PROJECT_NAME}
         ${PLATFORM_LIBS}
 )
 
+if(Qt6Keychain_FOUND)
+    target_link_libraries(${PROJECT_NAME} Qt6Keychain::Qt6Keychain)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE EZ4CONNECT_HAS_KEYCHAIN)
+endif()
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -178,6 +194,7 @@ if(BUILD_TESTING)
     add_executable(settingsprofileloader_test
         tests/settingsprofileloader_test.cpp
         infrastructure/settings/settingsprofileloader.cpp
+        application/profilesettings.cpp
     )
     target_include_directories(settingsprofileloader_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(settingsprofileloader_test Qt::Core)
@@ -222,6 +239,7 @@ if(BUILD_TESTING)
         tests/settingsmigrator_test.cpp
         application/settingsmigrator.cpp
         application/defaultsettings.cpp
+        application/profilesettings.cpp
     )
     target_include_directories(settingsmigrator_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(settingsmigrator_test Qt::Core)
@@ -230,6 +248,7 @@ if(BUILD_TESTING)
     add_executable(profilesettings_test
         tests/profilesettings_test.cpp
         application/defaultsettings.cpp
+        application/profilesettings.cpp
     )
     target_include_directories(profilesettings_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(profilesettings_test Qt::Core)
@@ -265,6 +284,7 @@ if(BUILD_TESTING)
         presentation/dialogs/authinfowindow/authinfowindow.cpp
         infrastructure/coreprocess/consoleoutputdecoder.cpp
         infrastructure/coreprocess/coreexecutable.cpp
+        application/profilesettings.cpp
     )
     target_include_directories(configurationguidedialog_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(configurationguidedialog_test
@@ -291,6 +311,7 @@ if(BUILD_TESTING)
         application/applicationlogger.cpp
         application/coreprocess.h
         application/connectionsession.cpp
+        application/profilesettings.cpp
         application/systemproxysession.cpp
         core/connectionsessionstate.cpp
         infrastructure/coreprocess/coreexecutable.cpp

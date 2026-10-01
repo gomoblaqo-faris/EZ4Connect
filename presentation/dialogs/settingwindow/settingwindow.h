@@ -40,6 +40,11 @@ private:
     QString customDNS;
     QString customProxyDomain;
     QString extraArguments;
+
+    // What the secret fields were filled with, to tell which ones changed.
+    QString loadedPassword;
+    QString loadedTotpSecret;
+    QString loadedCertPassword;
 };
 
 #endif //SETTINGWINDOW_H

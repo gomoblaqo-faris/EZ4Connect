@@ -10,7 +10,7 @@ void DefaultSettings::reset(QSettings &settings)
 
     writeInitial(settings, Username);
     write(settings, Password, QString());
-    writeInitial(settings, TOTPSecret);
+    write(settings, TOTPSecret, QString());
 
     writeInitial(settings, ConnectAfterStart);
     writeInitial(settings, CheckUpdateAfterStart);

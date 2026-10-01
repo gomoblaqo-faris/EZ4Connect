@@ -88,10 +88,20 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
             int status = QMessageBox::warning(this, "Warning", "This will reset all settings. Continue?", QMessageBox::Ok, QMessageBox::Cancel);
             if (status == QMessageBox::Ok)
             {
+                const bool secretsRemoved = ProfileSettings::forgetSecrets(*settings);
                 settings->clear();
 				DefaultSettings::reset(*settings);
 				settings->sync();
                 loadSettings();
+                if (!secretsRemoved)
+                {
+                    QMessageBox::warning(
+                        this,
+                        "Saved Passwords Not Removed",
+                        "The settings were reset, but the saved passwords could not be removed from "
+                        "the system credential store. Remove the EZ4Connect entries there by hand."
+                    );
+                }
             }
         });
 
@@ -107,8 +117,21 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 }
                 QSettings newSettings(filename, QSettings::IniFormat);
                 for (const auto& key : newSettings.allKeys()) {
+                    // The identifier names another profile's saved secrets.
+                    if (key == ProfileSettings::SecretId.name)
+                        continue;
                     settings->setValue(key, newSettings.value(key));
                 }
+                // A file without a secret means "none saved". Keeping this
+                // profile's old one would send it to the imported server.
+                for (const ProfileSettings::SecretKey *secret : {&ProfileSettings::Password,
+                                                                 &ProfileSettings::TOTPSecret,
+                                                                 &ProfileSettings::CertPassword})
+                {
+                    if (!newSettings.contains(secret->name))
+                        ProfileSettings::write(*settings, *secret, QString());
+                }
+                ProfileSettings::migrateSecrets(*settings);
                 settings->sync();
                 loadSettings();
             });
@@ -128,6 +151,21 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 if (QFile::exists(filename))
                     QFile::remove(filename);
                 QFile::copy(settings->fileName(), filename);
+                if (ProfileSettings::usesSecretStore())
+                {
+                    // The identifier would let whoever uses the exported file
+                    // read and overwrite this profile's saved passwords, and
+                    // a password the store refused is still in the file.
+                    QSettings exported(filename, QSettings::IniFormat);
+                    ProfileSettings::stripSecrets(exported);
+                    exported.sync();
+                    QMessageBox::information(
+                        this,
+                        "Passwords Not Exported",
+                        "Saved passwords are kept in the system credential store and are not "
+                        "part of the exported file. Enter them again after importing it."
+                    );
+                }
             });
 
     connect(ui->passwordVisibleCheckBox, &QCheckBox::checkStateChanged,
@@ -210,14 +248,13 @@ void SettingWindow::loadSettings()
         QString::number(ApplicationConstants::ConfigVersion)
     );
     ui->usernameLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::Username));
-    ui->passwordLineEdit->setText(
-        ProfileSettings::read(*settings, ProfileSettings::Password)
-    );
-    ui->totpSecretLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::TOTPSecret));
+    loadedPassword = ProfileSettings::read(*settings, ProfileSettings::Password);
+    loadedTotpSecret = ProfileSettings::read(*settings, ProfileSettings::TOTPSecret);
+    loadedCertPassword = ProfileSettings::read(*settings, ProfileSettings::CertPassword);
+    ui->passwordLineEdit->setText(loadedPassword);
+    ui->totpSecretLineEdit->setText(loadedTotpSecret);
     ui->certFileLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::CertFile));
-    ui->certPasswordLineEdit->setText(
-        ProfileSettings::read(*settings, ProfileSettings::CertPassword)
-    );
+    ui->certPasswordLineEdit->setText(loadedCertPassword);
     ui->credentialsAsArgumentsCheckBox->setChecked(
         ProfileSettings::read(*settings, ProfileSettings::CredentialsAsArguments)
     );
@@ -337,10 +374,19 @@ void SettingWindow::applySettings()
     profileManager.setSilentStartEnabled(ui->silentStartCheckBox->isChecked());
 
     ProfileSettings::write(*settings, ProfileSettings::Username, ui->usernameLineEdit->text());
-    ProfileSettings::write(*settings, ProfileSettings::Password, ui->passwordLineEdit->text());
-    ProfileSettings::write(*settings, ProfileSettings::TOTPSecret, ui->totpSecretLineEdit->text());
+    ProfileSettings::writeIfChanged(
+        *settings, ProfileSettings::Password, loadedPassword, ui->passwordLineEdit->text()
+    );
+    ProfileSettings::writeIfChanged(
+        *settings, ProfileSettings::TOTPSecret, loadedTotpSecret, ui->totpSecretLineEdit->text()
+    );
     ProfileSettings::write(*settings, ProfileSettings::CertFile, ui->certFileLineEdit->text());
-    ProfileSettings::write(*settings, ProfileSettings::CertPassword, ui->certPasswordLineEdit->text());
+    ProfileSettings::writeIfChanged(
+        *settings, ProfileSettings::CertPassword, loadedCertPassword, ui->certPasswordLineEdit->text()
+    );
+    loadedPassword = ui->passwordLineEdit->text();
+    loadedTotpSecret = ui->totpSecretLineEdit->text();
+    loadedCertPassword = ui->certPasswordLineEdit->text();
     ProfileSettings::write(*settings, ProfileSettings::CredentialsAsArguments, ui->credentialsAsArgumentsCheckBox->isChecked()
     );
 

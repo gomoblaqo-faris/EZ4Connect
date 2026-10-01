@@ -112,10 +112,11 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     usernameLineEdit->setText(
         ProfileSettings::read(*sourceSettings, ProfileSettings::Username)
     );
-    passwordLineEdit->setText(ProfileSettings::read(*sourceSettings, ProfileSettings::Password));
-    totpSecretLineEdit->setText(
-        ProfileSettings::read(*sourceSettings, ProfileSettings::TOTPSecret)
-    );
+    loadedPassword = ProfileSettings::read(*sourceSettings, ProfileSettings::Password);
+    loadedTotpSecret = ProfileSettings::read(*sourceSettings, ProfileSettings::TOTPSecret);
+    loadedCertPassword = ProfileSettings::read(*sourceSettings, ProfileSettings::CertPassword);
+    passwordLineEdit->setText(loadedPassword);
+    totpSecretLineEdit->setText(loadedTotpSecret);
     certificateTotpSecretLineEdit->setText(totpSecretLineEdit->text());
     countryCodeLineEdit->setText(
         ProfileSettings::read(*sourceSettings, ProfileSettings::PhoneCountryCode)
@@ -126,7 +127,7 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     certificateFileLineEdit->setText(
         ProfileSettings::read(*sourceSettings, ProfileSettings::CertFile)
     );
-    certificatePasswordLineEdit->setText(ProfileSettings::read(*sourceSettings, ProfileSettings::CertPassword));
+    certificatePasswordLineEdit->setText(loadedCertPassword);
 
     updateProtocolPage();
     updateNavigation();
@@ -139,13 +140,16 @@ void ConfigurationGuideDialog::applyTo(QSettings &settings) const
     ProfileSettings::write(settings, ProfileSettings::ServerPort, serverPortSpinBox->value());
     ProfileSettings::write(settings, ProfileSettings::Username, usernameLineEdit->text().trimmed()
     );
-    ProfileSettings::write(settings, ProfileSettings::Password, passwordLineEdit->text()
+    ProfileSettings::writeIfChanged(
+        settings, ProfileSettings::Password, loadedPassword, passwordLineEdit->text()
     );
-    ProfileSettings::write(settings, ProfileSettings::TOTPSecret, totpSecretLineEdit->text().trimmed()
+    ProfileSettings::writeIfChanged(
+        settings, ProfileSettings::TOTPSecret, loadedTotpSecret, totpSecretLineEdit->text().trimmed()
     );
     ProfileSettings::write(settings, ProfileSettings::CertFile, certificateFileLineEdit->text().trimmed()
     );
-    ProfileSettings::write(settings, ProfileSettings::CertPassword, certificatePasswordLineEdit->text()
+    ProfileSettings::writeIfChanged(
+        settings, ProfileSettings::CertPassword, loadedCertPassword, certificatePasswordLineEdit->text()
     );
     ProfileSettings::write(settings, ProfileSettings::PhoneCountryCode, countryCodeLineEdit->text().trimmed()
     );

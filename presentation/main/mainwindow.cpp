@@ -779,6 +779,9 @@ void MainWindow::createProfile()
     settings = profileService->settings();
     currentProfileId = profileService->currentProfileId();
     authenticationDialogs->setSettings(settings);
+    // The new profile starts as a copy of the previous one, so it still
+    // points at that profile's saved passwords.
+    ProfileSettings::detachSecrets(*settings);
     upgradeSettings();
     updateVersionInfo();
     resetZjuConnectUi();
@@ -959,6 +962,8 @@ void MainWindow::deleteCurrentProfile()
     }
 
     const QString removedProfileId = currentProfileId;
+    const QString removedSecretId =
+        ProfileSettings::read(*settings, ProfileSettings::SecretId);
     if (connectionSession != nullptr && connectionSession->isActive())
     {
         QMessageBox::warning(this, "Delete Failed", "Disconnect the VPN before deleting the profile.");
@@ -972,6 +977,15 @@ void MainWindow::deleteCurrentProfile()
     {
         QMessageBox::warning(this, "Delete Failed", "Could not delete the profile file.");
         return;
+    }
+    if (!ProfileSettings::forgetSecrets(removedSecretId))
+    {
+        QMessageBox::warning(
+            this,
+            "Saved Passwords Not Removed",
+            "The profile was deleted, but its saved passwords could not be removed from the "
+            "system credential store. Remove the EZ4Connect entries there by hand."
+        );
     }
     if (!ApplicationPaths::removeProfileData(removedProfileId))
     {
@@ -1013,6 +1027,7 @@ void MainWindow::upgradeSettings()
 
         const bool reset = msgBox.exec() == QMessageBox::Ok;
         SettingsMigrator::finish(*settings, reset);
+        ProfileSettings::migrateSecrets(*settings);
         if (reset)
         {
             QMessageBox::information(this, "Done", "Default settings restored.");
@@ -1020,6 +1035,7 @@ void MainWindow::upgradeSettings()
         return;
     }
     SettingsMigrator::finish(*settings, false);
+    ProfileSettings::migrateSecrets(*settings);
 }
 
 void MainWindow::updateVersionInfo()
