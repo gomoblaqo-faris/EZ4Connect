@@ -1,5 +1,7 @@
 #include "corecommandbuilder.h"
 
+#include <QProcess>
+
 namespace
 {
 QString quoteArgumentForLog(const QString &argument)
@@ -237,10 +239,8 @@ CoreCommand CoreCommandBuilder::build(const ConnectionProfile &profile, const Co
     appendOption(arguments, "-tcp-port-forwarding", profile.tunnel.tcpPortForwarding);
     appendOption(arguments, "-udp-port-forwarding", profile.tunnel.udpPortForwarding);
     appendOption(arguments, "-custom-dns", profile.dns.custom);
-    if (!profile.extraArguments.isEmpty())
-    {
-        arguments.append(profile.extraArguments.split(" "));
-    }
+    // An empty argument would make the core stop parsing every flag after it.
+    arguments.append(QProcess::splitCommand(profile.extraArguments));
 
     command.loggableArguments = arguments;
     command.arguments = credentialArguments + arguments;

@@ -320,6 +320,22 @@ bool omitsDisabledDebugArtifacts()
         "omitsDisabledDebugArtifacts"
     );
 }
+
+bool splitsExtraArgumentsWithoutEmptyEntries()
+{
+    ConnectionProfile profile;
+    profile.endpoint.protocol = "easyconnect";
+    // The settings editor turns line breaks into spaces, so blank lines
+    // arrive here as runs of spaces.
+    profile.extraArguments = "  -foo  bar   -path \"/tmp/with space\" ";
+
+    const CoreCommand command = CoreCommandBuilder::build(profile);
+    return expectEqual(
+        command.arguments,
+        {"-protocol", "easyconnect", "-foo", "bar", "-path", "/tmp/with space"},
+        "splitsExtraArgumentsWithoutEmptyEntries"
+    );
+}
 }
 
 int main(int argc, char *argv[])
@@ -335,6 +351,7 @@ int main(int argc, char *argv[])
         && passesCredentialsAsArgumentsWhenEnabled()
         && clearsManagedVariablesEvenWhenCredentialsAreEmpty()
         && quotesLoggableArgumentsWithoutChangingArguments()
-        && omitsDisabledDebugArtifacts();
+        && omitsDisabledDebugArtifacts()
+        && splitsExtraArgumentsWithoutEmptyEntries();
     return passed ? 0 : 1;
 }
