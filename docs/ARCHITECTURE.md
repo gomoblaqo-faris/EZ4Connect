@@ -49,6 +49,22 @@ dialogs.
   profile starts with, and the value assumed when the key is missing. It also decides whether a
   secret lives in the credential store or in the profile file.
 
+## Where the code does not match this yet
+
+The layering above is the direction, not yet the whole truth:
+
+- `MainWindow` is still large. Besides the window itself it runs profile creation, renaming and
+  deletion, the settings migration prompts, device trust and the tray.
+- `ConnectionUiController` holds the connect flow (which credentials are needed, when the system
+  proxy is on, how an error is worded). That is use-case logic and belongs in `application`, behind
+  an interface for asking the user, so that a front end other than the dialogs can reuse it.
+- `presentation` uses several `infrastructure` types directly instead of through ports:
+  `ApplicationPaths`, `DeviceTrust`, `CoreExecutable`, `Privileges`, `SettingsProfileLoader`,
+  and `ProfileManager` in the settings window.
+- A raw `QSettings` pointer for the current profile is handed to the dialogs. `ProfileService`
+  replaces that object when the profile changes, so every holder has to be told; profile changes
+  are refused while a dialog that edits the profile is open.
+
 Put new code where its reason to change lives: UI behaviour in `presentation`, use-case state in
 `application`, platform or file I/O in `infrastructure`, and connection rules that can be verified
 on their own in `core`. Do not reintroduce a general `utils` directory; create a shared module only

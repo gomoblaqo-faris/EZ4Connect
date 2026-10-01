@@ -66,7 +66,12 @@ Widgets, Network, Svg, Core5Compat and WebEngineWidgets.
 
 [QtKeychain](https://github.com/frankosterfeld/qtkeychain) is optional. When CMake finds it, saved
 passwords are kept in the macOS Keychain, Windows Credential Manager or the Linux Secret Service.
-Without it they stay in the profile file, as in upstream.
+Without it they stay in the profile file, as in upstream, where they are only encoded, not
+encrypted: anyone who can read the file can read them. The release workflow does not install
+QtKeychain, so its packages work that way.
+
+The `zju-connect` release that gets bundled is pinned, with checksums, in
+`scripts/zju-connect-release.txt`.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
