@@ -158,10 +158,10 @@ MainWindow::MainWindow(
             &MainWindow::updateConnectionState);
 
 
-    // 文件-退出
+    // File > Quit
     connect(ui->exitAction, &QAction::triggered, this, &MainWindow::gracefullyQuit);
 
-    // 文件-设置
+    // File > Settings
     connect(ui->settingAction, &QAction::triggered, this,
             [&]()
             {
@@ -176,7 +176,7 @@ MainWindow::MainWindow(
     connect(ui->openLogPushButton, &QPushButton::clicked,
             ui->openLogAction, &QAction::trigger);
 
-    // 文件-打开日志文件
+    // File > Open Log File
     connect(ui->openLogAction, &QAction::triggered, this,
             [this]()
             {
@@ -193,7 +193,7 @@ MainWindow::MainWindow(
                 }
             });
 
-    // 文件-清除系统代理
+    // File > Clear System Proxy
     connect(ui->disableProxyAction, &QAction::triggered,
             [&]()
             {
@@ -222,7 +222,7 @@ MainWindow::MainWindow(
                 connectionUiController->clearSystemProxy();
             });
 
-    // 文件-清理登录数据
+    // File > Clear Login Cache
     connect(ui->clearClientDataAction, &QAction::triggered, this,
             [&]()
             {
@@ -243,7 +243,7 @@ MainWindow::MainWindow(
                 qInfo().noquote() << "Login cache cleared";
             });
 
-    // 文件-设置授信设备
+    // File > Trust This Device
     connect(ui->trustDeviceAction, &QAction::triggered, this,
             [&]()
             {
@@ -264,7 +264,7 @@ MainWindow::MainWindow(
                 }
             });
 
-    // 文件-取消授信设备
+    // File > Untrust This Device
     connect(ui->untrustDeviceAction, &QAction::triggered, this,
             [&]()
             {
@@ -285,11 +285,11 @@ MainWindow::MainWindow(
                 }
             });
 
-    // 帮助-检查更新
+    // Help > Check for Updates
     connect(ui->checkUpdateAction, &QAction::triggered,
             updateChecker, &UpdateChecker::check);
 
-    // 帮助-项目主页
+    // Help > Project Homepage
     connect(ui->projectAction, &QAction::triggered,
             [&]()
             {
@@ -298,14 +298,14 @@ MainWindow::MainWindow(
                 ));
             });
 
-    // 帮助-关于本软件
+    // Help > About
     connect(ui->aboutAction, &QAction::triggered,
             [&]()
             {
                 PresentationHelpers::showAboutDialog(this);
             });
 
-    // 复制日志
+    // Copy the log
     connect(ui->copyLogPushButton, &QPushButton::clicked,
             [&]()
             {
@@ -314,7 +314,7 @@ MainWindow::MainWindow(
             }
     );
 
-    // 清空日志
+    // Clear the log
     connect(ui->clearLogPushButton, &QPushButton::clicked,
             [&]()
             {
@@ -532,7 +532,7 @@ void MainWindow::updateProfileSummary()
 
 void MainWindow::setupTrayIcon()
 {
-    // 系统托盘
+    // System tray
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(
         QIcon(QPixmap(":/resource/icon.png").scaled(512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
@@ -578,7 +578,7 @@ void MainWindow::setupTrayIcon()
 
 void MainWindow::setupProfileMenu()
 {
-    // 务必在 setupTrayIcon 之后调用，以确保 trayProfileMenu 已正确初始化
+    // Must be called after setupTrayIcon, which creates trayProfileMenu
     ui->profileMenu->addSeparator();
     newProfileAction = ui->profileMenu->addAction("New Profile");
     renameProfileAction = ui->profileMenu->addAction("Rename Current Profile");
@@ -1070,7 +1070,7 @@ void MainWindow::showNotification(const QString &title, const QString &content, 
 
 void MainWindow::cleanUpWhenQuit()
 {
-    // 保存配置
+    // Save the settings
     if (ProfileSettings::read(*settings, ProfileSettings::ConfigVersion) <=
         ApplicationConstants::ConfigVersion)
     {
@@ -1082,7 +1082,7 @@ void MainWindow::cleanUpWhenQuit()
     }
     settings->sync();
 
-    // 清除系统代理
+    // Clear the system proxy
     coordinator->prepareForShutdown();
 }
 

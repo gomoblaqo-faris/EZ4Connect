@@ -37,12 +37,13 @@ bool extractsMultipleLinesAndNormalizesCrLf()
 bool preservesSplitUtf8Characters()
 {
     CoreOutputBuffer buffer;
-    const QByteArray output = QStringLiteral("日志内容").toUtf8() + '\n';
+    // The euro sign is three bytes in UTF-8, so the split below falls inside it.
+    const QByteArray output = QStringLiteral("\u20ac log line").toUtf8() + '\n';
     const qsizetype splitPosition = 2;
 
     const bool firstChunkBuffered = buffer.append(output.first(splitPosition)).isEmpty();
     const QList<QByteArray> lines = buffer.append(output.sliced(splitPosition));
-    if (!firstChunkBuffered || lines != QList<QByteArray>{QStringLiteral("日志内容").toUtf8()})
+    if (!firstChunkBuffered || lines != QList<QByteArray>{QStringLiteral("\u20ac log line").toUtf8()})
     {
         qCritical() << "preservesSplitUtf8Characters failed";
         return false;

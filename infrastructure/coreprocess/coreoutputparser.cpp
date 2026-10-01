@@ -26,7 +26,8 @@ CoreOutputEvent CoreOutputParser::parse(const QString &output)
     {
         return CoreOutputEvent::RandCode;
     }
-    // aTrust RADIUS Access-Challenge：核心在密码认证后输出此提示并等待用户输入短信验证码。
+    // aTrust RADIUS Access-Challenge: after password authentication the core
+    // prints this prompt and waits for the SMS code.
     if (output.contains("Please enter the RADIUS token:"))
     {
         return CoreOutputEvent::RadiusCodeWithSkipOption;
