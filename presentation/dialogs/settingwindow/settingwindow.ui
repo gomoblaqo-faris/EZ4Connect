@@ -151,7 +151,7 @@ App config version: ?</string>
           <item row="7" column="1" colspan="2">
            <widget class="QLineEdit" name="systemProxyBypassLineEdit">
             <property name="placeholderText">
-             <string>OS-dependent; usually separated by semicolons (;)</string>
+             <string>Separated by semicolons (;)</string>
             </property>
            </widget>
           </item>
@@ -550,7 +550,7 @@ App config version: ?</string>
              <string/>
             </property>
             <property name="placeholderText">
-             <string>Optional: generated automatically if empty; CAS/OAuth2 only</string>
+             <string>Optional; CAS/OAuth2 only</string>
             </property>
            </widget>
           </item>
@@ -724,14 +724,14 @@ App config version: ?</string>
        <item row="3" column="1" colspan="3">
         <widget class="QLineEdit" name="localDnsServerLineEdit">
          <property name="placeholderText">
-          <string>Resolves the VPN server's domain; leave empty to use the system DNS</string>
+          <string>Resolves the VPN server; empty = system DNS</string>
          </property>
         </widget>
        </item>
        <item row="8" column="1" colspan="3">
         <widget class="QLineEdit" name="shadowsocksUrlLineEdit">
          <property name="placeholderText">
-          <string>Leave empty to disable. Format: ss://cipher:password@server:port</string>
+          <string>ss://cipher:password@server:port</string>
          </property>
         </widget>
        </item>
@@ -762,14 +762,14 @@ App config version: ?</string>
        <item row="1" column="1">
         <widget class="QLineEdit" name="dnsLineEdit">
          <property name="placeholderText">
-          <string>Tick Auto, otherwise this should not be empty</string>
+          <string>Required unless Auto is ticked</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1" colspan="3">
         <widget class="QLineEdit" name="secondaryDnsLineEdit">
          <property name="placeholderText">
-          <string>Leave empty to use the system DNS; required for DNS hijack</string>
+          <string>Empty = system DNS; needed for DNS hijack</string>
          </property>
         </widget>
        </item>
@@ -831,7 +831,7 @@ App config version: ?</string>
        <item row="10" column="1" colspan="3">
         <widget class="QLineEdit" name="dialDirectProxyLineEdit">
          <property name="placeholderText">
-          <string>Proxy used for direct connections. Supports socks://... or http://...</string>
+          <string>socks://... or http://...</string>
          </property>
         </widget>
        </item>
@@ -1019,7 +1019,7 @@ App config version: ?</string>
        <item row="11" column="1" colspan="3">
         <widget class="QLineEdit" name="keepAliveUrlLineEdit">
          <property name="placeholderText">
-          <string>URL used for keep-alive; leave empty for DNS keep-alive</string>
+          <string>Leave empty for DNS keep-alive</string>
          </property>
         </widget>
        </item>
@@ -1033,7 +1033,7 @@ App config version: ?</string>
        <item row="12" column="1" colspan="3">
         <widget class="QLineEdit" name="bindInterfaceLineEdit">
          <property name="placeholderText">
-          <string>Network interface used for the connection; leave empty to choose automatically</string>
+          <string>Leave empty to choose automatically</string>
          </property>
         </widget>
        </item>

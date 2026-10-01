@@ -374,7 +374,7 @@
              <item>
               <widget class="QLabel" name="logSubtitleLabel">
                <property name="text">
-                <string>Connection progress and diagnostics</string>
+                <string>Progress and diagnostics</string>
                </property>
               </widget>
              </item>
