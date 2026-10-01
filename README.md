@@ -1,64 +1,97 @@
 # EZ4Connect
 
-*前身为 HITsz Connect for Windows*
+*Formerly HITsz Connect for Windows*
 
 ![Action](https://github.com/chenx-dust/EZ4Connect/actions/workflows/build.yml/badge.svg)
 ![Release](https://img.shields.io/github/v/release/chenx-dust/EZ4Connect)
 ![Downloads](https://img.shields.io/github/downloads/chenx-dust/EZ4Connect/total)
 ![License](https://img.shields.io/github/license/chenx-dust/EZ4Connect)
 
-改进的 ZJU-Connect 图形界面
+An improved graphical interface for ZJU-Connect.
 
-## 🎉 现已正式提供 aTrust 支持
+> **About this fork.** This is a fork of [chenx-dust/EZ4Connect](https://github.com/chenx-dust/EZ4Connect)
+> with an English interface and a number of fixes. The badges and release
+> downloads below belong to the upstream project, whose builds have a Chinese
+> interface and do not include these changes. To get this fork's version,
+> build it from source (see [Development](#development)).
 
-如使用中遇到问题，可加入 ZJU-Connect 用户反馈 QQ 群 1037726410 交流。
+## 🎉 aTrust is now officially supported
+
+If you run into problems, you can join the ZJU-Connect user feedback QQ group: 1037726410.
 
 <div align="center">
 <img src="docs/main.png" width="600px">
 </div>
 
-## 使用方式
+## Usage
 
-在本项目的 [Releases](https://github.com/chenx-dust/EZ4Connect/releases) 页面下载最新版本：
+Download the latest version from the upstream [Releases](https://github.com/chenx-dust/EZ4Connect/releases) page:
 
-- **Windows 用户**：下载 `EZ4Connect-vX.X.X-windows-ARCH.zip` ，解压至同一目录下，双击运行 `EZ4Connect.exe` ；
-  - 如果遇到缺少 DLL 等问题，请先下载安装 Microsoft Visual C++ 可再发行程序包版本（[x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) | [arm64](https://aka.ms/vs/17/release/vc_redist.arm64.exe)），再运行程序；
-- **macOS 用户**：下载 `EZ4Connect-vX.X.X-macOS-ARCH.dmg` ，将 EZ4Connect 移动到应用程序目录中；
-  - ~~如果遇到“Apple 无法检查 App 是否包含恶意软件”等报错，请参考 [Apple 支持](https://support.apple.com/zh-cn/guide/mac-help/mchleab3a043/mac) 进行操作。~~本软件已通过 Apple 官方公证，可直接运行；
-- **Linux 用户**：下载 `EZ4Connect-vX.X.X-linux-ARCH.AppImage` ，赋予执行权限，运行即可；
-  - AppImage x64 仅支持系统 `glibc >= 2.31` 的发行版，Ubuntu 22.04 及以上版本可以正常运行（受限于 GitHub Actions Runner）；
-  - AppImage arm64 仅支持系统 `glibc >= 2.38` 的发行版，Ubuntu 24.04 及以上版本可以正常运行（受限于 Qt 官方：[参考](https://doc.qt.io/qt-6/supported-platforms.html)）；
-  - Arch Linux 用户推荐使用 [AUR](https://aur.archlinux.org/packages/ez4connect) 安装；
-  - 如果遇到因依赖问题无法运行的情况，请自行编译运行。
+- **Windows**: download `EZ4Connect-vX.X.X-windows-ARCH.zip`, extract everything into one folder, and double-click `EZ4Connect.exe`.
+  - If you get errors about missing DLLs, install the Microsoft Visual C++ Redistributable ([x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) | [arm64](https://aka.ms/vs/17/release/vc_redist.arm64.exe)) first, then run the program.
+- **macOS**: download `EZ4Connect-vX.X.X-macOS-ARCH.dmg` and move EZ4Connect into the Applications folder.
+  - The upstream builds are notarized by Apple and run without extra steps.
+- **Linux**: download `EZ4Connect-vX.X.X-linux-ARCH.AppImage`, make it executable, and run it.
+  - The x64 AppImage only supports distributions with `glibc >= 2.31`; Ubuntu 22.04 and later work (a limit of the GitHub Actions runner).
+  - The arm64 AppImage only supports distributions with `glibc >= 2.38`; Ubuntu 24.04 and later work (a limit of the official Qt builds: [reference](https://doc.qt.io/qt-6/supported-platforms.html)).
+  - Arch Linux users are encouraged to install from the [AUR](https://aur.archlinux.org/packages/ez4connect).
+  - If it will not run because of dependency problems, build it from source.
 
-1. 跟随配置向导进行服务器与账户设置，或在“设置”中手动配置；
+Then:
 
-2. 在主界面中点击“连接服务器”。如果只需进行校园网页浏览，则选择“设置系统代理”后即可使用。
+1. Follow the Setup Guide to configure the server and your account, or configure them by hand in Settings.
+2. Click **Connect** in the main window. If you only need to browse internal sites, click **Set System Proxy** and you are done.
 
-如果需要配合 Clash / Mihomo 进行高级的分流操作，可以参见： [高级使用方式](docs/ADVANCED_USAGE.md)
+For advanced traffic splitting together with Clash / Mihomo, see [Advanced usage](docs/ADVANCED_USAGE.md) (in Chinese).
 
-## 路线图
+## Roadmap
 
-如有更多好的建议，可以在 Issue 中或是 OSA 群里提出！
+Suggestions are welcome in the Issues or in the OSA group.
 
-- [X] 支持 macOS 系统
-- [X] 支持 Linux 系统
-- [X] 支持手动设置 Proxy Bypass
-- [X] 上传 AUR 包
-- [ ] 使用密钥链存储密码等信息
+- [X] macOS support
+- [X] Linux support
+- [X] Manually configurable proxy bypass
+- [X] AUR package
+- [X] Store passwords in the system keychain (in this fork, when built with QtKeychain)
 
-## 开发
+## Development
 
-项目的分层、依赖方向和新增代码归属规则见
-[架构说明](docs/ARCHITECTURE.md)。
+The layering, dependency direction and rules for where new code belongs are described in the
+[architecture notes](docs/ARCHITECTURE.md) (in Chinese).
 
-## 许可证
+### Building
 
-本项目遵循 [GNU General Public License Version 3](LICENSE) 开源。
+You need CMake, a C++17 compiler and Qt 6.5 or later with these modules: Core, Concurrent, Gui,
+Widgets, Network, Svg, Core5Compat and WebEngineWidgets.
 
-## 致谢
+[QtKeychain](https://github.com/frankosterfeld/qtkeychain) is optional. When CMake finds it, saved
+passwords are kept in the macOS Keychain, Windows Credential Manager or the Linux Secret Service.
+Without it they stay in the profile file, as in upstream.
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+On macOS with Homebrew, the dependencies are:
+
+```bash
+brew install cmake qtbase qtsvg qt5compat qtwebengine qtkeychain
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew
+```
+
+The app needs the `zju-connect` core next to its own executable (inside `EZ4Connect.app/Contents/MacOS/`
+on macOS) or on `PATH`. The scripts in `scripts/` download the core and assemble a distributable
+package for each platform; they are what the release workflow runs.
+
+## License
+
+This project is released under the [GNU General Public License Version 3](LICENSE).
+
+## Acknowledgements
 
 - [Mythologyli/ZJU-Connect-for-Windows](https://github.com/Mythologyli/ZJU-Connect-for-Windows)
 - [Mythologyli/zju-connect](https://github.com/Mythologyli/zju-connect)
 
-> 欢迎加入 HITSZ 开源技术协会 [@hitszosa](https://github.com/hitszosa)
+> You are welcome to join the HITSZ Open Source Association [@hitszosa](https://github.com/hitszosa)
