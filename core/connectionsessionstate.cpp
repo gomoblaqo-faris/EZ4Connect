@@ -77,9 +77,14 @@ bool ConnectionSessionState::requestStop()
 ProcessFinishAction ConnectionSessionState::processFinished()
 {
     const bool connectionWasEstablished = currentState == ConnectionState::Running;
+    // An established connection that ends without a recognised error is an
+    // unexpected drop. Startup exits are excluded so a core that never
+    // connects cannot be restarted forever.
+    const bool droppedSilently = connectionWasEstablished
+        && currentError == ZJU_ERROR::NONE;
     if (desiredConnected
         && reconnectPolicy.enabled
-        && isReconnectable(currentError))
+        && (droppedSilently || isReconnectable(currentError)))
     {
         currentState = ConnectionState::Reconnecting;
         return ProcessFinishAction::Reconnect;

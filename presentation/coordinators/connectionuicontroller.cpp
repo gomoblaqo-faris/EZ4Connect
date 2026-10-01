@@ -122,7 +122,9 @@ ConnectionUiController::ConnectionUiController(
         [this](ZJU_ERROR error)
         {
             qInfo().noquote() << "VPN disconnected.";
-            if (error != ZJU_ERROR::NONE)
+            const bool interrupted =
+                this->connectionSession->state() == ConnectionState::Interrupted;
+            if (error != ZJU_ERROR::NONE || interrupted)
             {
                 this->notificationHandler(
                     "VPN",
@@ -133,7 +135,7 @@ ConnectionUiController::ConnectionUiController(
             this->connectButton->setText("Connect");
             this->trayConnectAction->setText("Connect");
             this->proxyButton->hide();
-            if (this->connectionSession->state() != ConnectionState::Interrupted)
+            if (!interrupted)
             {
                 showConnectionError(error);
             }

@@ -110,6 +110,62 @@ bool establishedConnectionEndsAsInterrupted()
     }
     return true;
 }
+
+bool reconnectsWhenEstablishedConnectionDropsSilently()
+{
+    ConnectionSessionState session;
+    session.requestStart({true, 1000});
+    session.connectionEstablished();
+
+    if (session.processFinished() != ProcessFinishAction::Reconnect
+        || session.state() != ConnectionState::Reconnecting)
+    {
+        qCritical() << "reconnectsWhenEstablishedConnectionDropsSilently failed at scheduling";
+        return false;
+    }
+
+    // A core that exits again before the connection is back must not loop.
+    session.beginReconnect();
+    if (session.processFinished() != ProcessFinishAction::Complete
+        || session.state() != ConnectionState::Disconnected)
+    {
+        qCritical() << "reconnectsWhenEstablishedConnectionDropsSilently retried a startup exit";
+        return false;
+    }
+    return true;
+}
+
+bool silentDropWithoutReconnectPolicyEndsAsInterrupted()
+{
+    ConnectionSessionState session;
+    session.requestStart({false, 1000});
+    session.connectionEstablished();
+
+    if (session.processFinished() != ProcessFinishAction::Complete
+        || session.state() != ConnectionState::Interrupted
+        || session.error() != ZJU_ERROR::NONE)
+    {
+        qCritical() << "silentDropWithoutReconnectPolicyEndsAsInterrupted failed";
+        return false;
+    }
+    return true;
+}
+
+bool requestedStopIsNeverReconnected()
+{
+    ConnectionSessionState session;
+    session.requestStart({true, 1000});
+    session.connectionEstablished();
+    session.requestStop();
+
+    if (session.processFinished() != ProcessFinishAction::Complete
+        || session.state() != ConnectionState::Disconnected)
+    {
+        qCritical() << "requestedStopIsNeverReconnected failed";
+        return false;
+    }
+    return true;
+}
 }
 
 int main(int argc, char *argv[])
@@ -119,6 +175,9 @@ int main(int argc, char *argv[])
         && reconnectsOnlyEligibleFailures()
         && keepsFirstErrorAndCancelsPendingReconnect()
         && establishedConnectionEndsAsInterrupted()
+        && reconnectsWhenEstablishedConnectionDropsSilently()
+        && silentDropWithoutReconnectPolicyEndsAsInterrupted()
+        && requestedStopIsNeverReconnected()
         ? 0
         : 1;
 }
