@@ -4,10 +4,11 @@
 
 #include "application/applicationconstants.h"
 #include "application/defaultsettings.h"
+#include "application/profilesettings.h"
 
 SettingsMigrationAction SettingsMigrator::prepare(QSettings &settings)
 {
-    const int configVersion = settings.value("Common/ConfigVersion", -1).toInt();
+    const int configVersion = ProfileSettings::read(settings, ProfileSettings::ConfigVersion);
     if (configVersion == -1)
     {
         DefaultSettings::reset(settings);
@@ -15,7 +16,7 @@ SettingsMigrationAction SettingsMigrator::prepare(QSettings &settings)
     }
     if (configVersion == 4)
     {
-        settings.setValue("ZJUConnect/Protocol", "easyconnect");
+        ProfileSettings::write(settings, ProfileSettings::Protocol, "easyconnect");
         return SettingsMigrationAction::None;
     }
     if (configVersion == 6)
@@ -36,8 +37,9 @@ void SettingsMigrator::finish(QSettings &settings, bool resetToDefaults)
         settings.clear();
         DefaultSettings::reset(settings);
     }
-    settings.setValue(
-        "Common/ConfigVersion",
+    ProfileSettings::write(
+        settings,
+        ProfileSettings::ConfigVersion,
         ApplicationConstants::ConfigVersion
     );
     settings.sync();

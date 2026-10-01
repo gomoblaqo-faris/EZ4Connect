@@ -1,5 +1,7 @@
 #include "settingsprofileloader.h"
 
+#include "application/profilesettings.h"
+
 ConnectionProfile SettingsProfileLoader::load(
     const QSettings &settings,
     const QString &profileId,
@@ -9,95 +11,88 @@ ConnectionProfile SettingsProfileLoader::load(
 {
     ConnectionProfile profile;
     profile.profileId = profileId;
-    const QString easyconnectAuthType = settings.value(
-        "ZJUConnect/EasyConnectAuthType",
-        settings.value("Credential/CertFile", "").toString().isEmpty()
-            ? "password"
-            : "certificate"
-    ).toString();
+    const QString easyconnectAuthType = ProfileSettings::easyConnectAuthType(settings);
     const bool useCertificate =
-        settings.value("ZJUConnect/Protocol").toString() == "easyconnect"
+        ProfileSettings::read(settings, ProfileSettings::Protocol) == "easyconnect"
         && easyconnectAuthType == "certificate";
     profile.credentials = {
         username,
         password,
-        settings.value("Credential/TOTPSecret").toString(),
+        ProfileSettings::read(settings, ProfileSettings::TOTPSecret),
         useCertificate
-            ? settings.value("Credential/CertFile", "").toString()
+            ? ProfileSettings::read(settings, ProfileSettings::CertFile)
             : QString(),
         useCertificate
-            ? QByteArray::fromBase64(
-                  settings.value("Credential/CertPassword", "").toByteArray()
-              )
+            ? ProfileSettings::read(settings, ProfileSettings::CertPassword)
             : QString(),
-        settings.value("ZJUConnect/CredentialsAsArguments", false).toBool()
+        ProfileSettings::read(settings, ProfileSettings::CredentialsAsArguments)
     };
 
-    const QString countryCode = settings.value("ZJUConnect/PhoneCountryCode").toString();
-    const QString phoneNumber = settings.value("ZJUConnect/PhoneNumber").toString();
+    const QString countryCode = ProfileSettings::read(settings, ProfileSettings::PhoneCountryCode);
+    const QString phoneNumber = ProfileSettings::read(settings, ProfileSettings::PhoneNumber);
     const QString phone = !countryCode.isEmpty() && !phoneNumber.isEmpty()
         ? countryCode + "-" + phoneNumber
         : QString();
     profile.endpoint = {
-        settings.value("ZJUConnect/Protocol").toString(),
-        settings.value("ZJUConnect/AuthType").toString(),
-        settings.value("ZJUConnect/LoginDomain").toString(),
+        ProfileSettings::read(settings, ProfileSettings::Protocol),
+        ProfileSettings::read(settings, ProfileSettings::AuthType),
+        ProfileSettings::read(settings, ProfileSettings::LoginDomain),
         phone,
-        settings.value("ZJUConnect/ServerAddress").toString(),
-        settings.value("ZJUConnect/ServerPort").toInt()
+        ProfileSettings::read(settings, ProfileSettings::ServerAddress),
+        ProfileSettings::read(settings, ProfileSettings::ServerPort)
     };
 
     profile.dns = {
-        settings.value("ZJUConnect/DNS").toString(),
-        settings.value("ZJUConnect/DNSAuto").toBool(),
-        settings.value("ZJUConnect/SecondaryDNS").toString(),
-        settings.value("ZJUConnect/DNSTTL").toInt(),
-        settings.value("ZJUConnect/DisableZJUDNS").toBool(),
-        settings.value("ZJUConnect/CustomDNS", "").toString(),
-        settings.value("ZJUConnect/LocalDNSServer", "").toString(),
-        settings.value("ZJUConnect/DNSServerBind", "").toString()
+        ProfileSettings::read(settings, ProfileSettings::DNS),
+        ProfileSettings::read(settings, ProfileSettings::DNSAuto),
+        ProfileSettings::read(settings, ProfileSettings::SecondaryDNS),
+        ProfileSettings::read(settings, ProfileSettings::DNSTTL),
+        ProfileSettings::read(settings, ProfileSettings::DisableZJUDNS),
+        ProfileSettings::read(settings, ProfileSettings::CustomDNS),
+        ProfileSettings::read(settings, ProfileSettings::LocalDNSServer),
+        ProfileSettings::read(settings, ProfileSettings::DNSServerBind)
     };
 
-    const QString bindPrefix = settings.value("ZJUConnect/OutsideAccess", false).toBool()
+    const QString bindPrefix = ProfileSettings::read(settings, ProfileSettings::OutsideAccess)
         ? "[::]:"
         : "127.0.0.1:";
     profile.proxy = {
-        bindPrefix + QString::number(settings.value("ZJUConnect/SOCKS5Port").toInt()),
-        bindPrefix + QString::number(settings.value("ZJUConnect/HTTPPort").toInt()),
-        settings.value("ZJUConnect/ShadowsocksURL").toString(),
-        settings.value("ZJUConnect/DialDirectProxy").toString(),
-        settings.value("ZJUConnect/ProxyAll").toBool(),
-        settings.value("ZJUConnect/CustomProxyDomain", "").toString()
+        bindPrefix + QString::number(ProfileSettings::read(settings, ProfileSettings::SOCKS5Port)),
+        bindPrefix + QString::number(ProfileSettings::read(settings, ProfileSettings::HTTPPort)),
+        ProfileSettings::read(settings, ProfileSettings::ShadowsocksURL),
+        ProfileSettings::read(settings, ProfileSettings::DialDirectProxy),
+        ProfileSettings::read(settings, ProfileSettings::ProxyAll),
+        ProfileSettings::read(settings, ProfileSettings::CustomProxyDomain)
     };
 
     profile.tunnel = {
-        settings.value("ZJUConnect/TUNMode").toBool(),
-        settings.value("ZJUConnect/AddRoute").toBool(),
-        settings.value("ZJUConnect/DNSHijack").toBool(),
-        settings.value("ZJUConnect/FakeIP").toBool(),
-        settings.value("ZJUConnect/TCPTunnelMode").toBool(),
-        settings.value("ZJUConnect/TCPPortForwarding").toString(),
-        settings.value("ZJUConnect/UDPPortForwarding").toString()
+        ProfileSettings::read(settings, ProfileSettings::TUNMode),
+        ProfileSettings::read(settings, ProfileSettings::AddRoute),
+        ProfileSettings::read(settings, ProfileSettings::DNSHijack),
+        ProfileSettings::read(settings, ProfileSettings::FakeIP),
+        ProfileSettings::read(settings, ProfileSettings::TCPTunnelMode),
+        ProfileSettings::read(settings, ProfileSettings::TCPPortForwarding),
+        ProfileSettings::read(settings, ProfileSettings::UDPPortForwarding)
     };
 
     profile.behavior = {
-        settings.value("ZJUConnect/UpdateBestNodesInterval", 300).toInt(),
-        !settings.value("ZJUConnect/MultiLine").toBool(),
-        !settings.value("ZJUConnect/KeepAlive").toBool(),
-        settings.value("ZJUConnect/KeepAliveURL", "").toString(),
-        settings.value("ZJUConnect/BindInterface", "").toString(),
-        settings.value("ZJUConnect/AutoDetectInterface", false).toBool(),
-        settings.value("ZJUConnect/SkipDomainResource").toBool(),
-        settings.value("ZJUConnect/DisableServerConfig").toBool(),
-        !settings.value("ZJUConnect/ZJUDefault").toBool()
+        ProfileSettings::read(settings, ProfileSettings::UpdateBestNodesInterval),
+        !ProfileSettings::read(settings, ProfileSettings::MultiLine),
+        !ProfileSettings::read(settings, ProfileSettings::KeepAlive),
+        ProfileSettings::read(settings, ProfileSettings::KeepAliveURL),
+        ProfileSettings::read(settings, ProfileSettings::BindInterface),
+        ProfileSettings::read(settings, ProfileSettings::AutoDetectInterface),
+        ProfileSettings::read(settings, ProfileSettings::SkipDomainResource),
+        ProfileSettings::read(settings, ProfileSettings::DisableServerConfig),
+        !ProfileSettings::read(settings, ProfileSettings::ZJUDefault)
     };
 
     profile.debug = {
-        settings.value("ZJUConnect/Debug").toBool(),
-        settings.value("ZJUConnect/DebugPCAP", false).toBool(),
-        settings.value("ZJUConnect/DebugTLSLog", false).toBool()
+        ProfileSettings::read(settings, ProfileSettings::Debug),
+        ProfileSettings::read(settings, ProfileSettings::DebugPCAP),
+        ProfileSettings::read(settings, ProfileSettings::DebugTLSLog)
     };
 
-    profile.extraArguments = settings.value("ZJUConnect/ExtraArguments", "").toString();
+    profile.extraArguments = ProfileSettings::read(settings, ProfileSettings::ExtraArguments);
     return profile;
 }

@@ -21,6 +21,7 @@
 #include "application/applicationlogger.h"
 #include "application/applicationconstants.h"
 #include "application/commandlineoptions.h"
+#include "application/profilesettings.h"
 #include "application/settingsmigrator.h"
 #include "infrastructure/coreprocess/devicetrust.h"
 #include "infrastructure/logging/applicationlogfile.h"
@@ -66,7 +67,7 @@ MainWindow::MainWindow(
     settings = profileService->settings();
 
     const bool isFirstLaunch =
-        !settings->contains("Common/ConfigVersion");
+        !ProfileSettings::contains(*settings, ProfileSettings::ConfigVersion);
     upgradeSettings();
 
     ui->setupUi(this);
@@ -249,9 +250,9 @@ MainWindow::MainWindow(
                 try
                 {
                     DeviceTrust::set(this,
-                        settings->value("ZJUConnect/Protocol", "easyconnect").toString(),
-                        settings->value("ZJUConnect/ServerAddress").toString(),
-                        settings->value("ZJUConnect/ServerPort").toInt(),
+                        ProfileSettings::read(*settings, ProfileSettings::Protocol),
+                        ProfileSettings::read(*settings, ProfileSettings::ServerAddress),
+                        ProfileSettings::read(*settings, ProfileSettings::ServerPort),
                         currentProfileId, true);
                     qInfo().noquote() << "Device trusted";
                     QMessageBox::information(this, "Success", "This device is now trusted.");
@@ -270,9 +271,9 @@ MainWindow::MainWindow(
                 try
                 {
                     DeviceTrust::set(this,
-                        settings->value("ZJUConnect/Protocol", "easyconnect").toString(),
-                        settings->value("ZJUConnect/ServerAddress").toString(),
-                        settings->value("ZJUConnect/ServerPort").toInt(),
+                        ProfileSettings::read(*settings, ProfileSettings::Protocol),
+                        ProfileSettings::read(*settings, ProfileSettings::ServerAddress),
+                        ProfileSettings::read(*settings, ProfileSettings::ServerPort),
                         currentProfileId, false);
                     qInfo().noquote() << "Device untrusted";
                     QMessageBox::information(this, "Success", "This device is no longer trusted.");
@@ -345,7 +346,7 @@ MainWindow::MainWindow(
     );
 
     bool shouldConnect =
-        settings->value("Common/ConnectAfterStart", false).toBool();
+        ProfileSettings::read(*settings, ProfileSettings::ConnectAfterStart);
     if (qApp->arguments().contains("--connect"))
     {
         shouldConnect = true;
@@ -355,7 +356,7 @@ MainWindow::MainWindow(
         ui->pushButton1->click();
     }
 
-    if (settings->value("Common/CheckUpdateAfterStart", true).toBool())
+    if (ProfileSettings::read(*settings, ProfileSettings::CheckUpdateAfterStart))
     {
         updateChecker->check();
     }
@@ -515,17 +516,12 @@ void MainWindow::updateProfileSummary()
     const QString profileName = currentProfileId.isEmpty()
         ? QStringLiteral("Default")
         : currentProfileId;
-    const QString protocolSetting = settings->value(
-        "ZJUConnect/Protocol",
-        "easyconnect"
-    ).toString();
+    const QString protocolSetting = ProfileSettings::read(*settings, ProfileSettings::Protocol);
     const QString protocol = protocolSetting.compare(
         "atrust",
         Qt::CaseInsensitive
     ) == 0 ? QStringLiteral("aTrust") : QStringLiteral("EasyConnect");
-    const QString server = settings->value(
-        "ZJUConnect/ServerAddress"
-    ).toString().trimmed();
+    const QString server = ProfileSettings::read(*settings, ProfileSettings::ServerAddress).trimmed();
 
     QStringList details{protocol};
     details.append(server.isEmpty() ? QStringLiteral("No server configured") : server);
@@ -814,19 +810,19 @@ void MainWindow::openConfigurationGuide()
     }
 
     const QString oldServerAddress =
-        settings->value("ZJUConnect/ServerAddress").toString();
+        ProfileSettings::read(*settings, ProfileSettings::ServerAddress);
     const int oldServerPort =
-        settings->value("ZJUConnect/ServerPort").toInt();
+        ProfileSettings::read(*settings, ProfileSettings::ServerPort);
     const QString oldProtocol =
-        settings->value("ZJUConnect/Protocol").toString();
+        ProfileSettings::read(*settings, ProfileSettings::Protocol);
     const QString oldAuthType =
-        settings->value("ZJUConnect/AuthType").toString();
+        ProfileSettings::read(*settings, ProfileSettings::AuthType);
     const QString oldEasyConnectAuthType =
-        settings->value("ZJUConnect/EasyConnectAuthType").toString();
+        ProfileSettings::easyConnectAuthType(*settings);
     const QString oldLoginDomain =
-        settings->value("ZJUConnect/LoginDomain").toString();
+        ProfileSettings::read(*settings, ProfileSettings::LoginDomain);
     const QString oldLoginUrl =
-        settings->value("ZJUConnect/LoginURL").toString();
+        ProfileSettings::read(*settings, ProfileSettings::LoginURL);
 
     ConfigurationGuideDialog guide(this, settings);
     if (guide.exec() != QDialog::Accepted)
@@ -836,14 +832,14 @@ void MainWindow::openConfigurationGuide()
     guide.applyTo(*settings);
 
     const bool authenticationSettingsChanged =
-        oldServerAddress != settings->value("ZJUConnect/ServerAddress").toString()
-        || oldServerPort != settings->value("ZJUConnect/ServerPort").toInt()
-        || oldProtocol != settings->value("ZJUConnect/Protocol").toString()
-        || oldAuthType != settings->value("ZJUConnect/AuthType").toString()
+        oldServerAddress != ProfileSettings::read(*settings, ProfileSettings::ServerAddress)
+        || oldServerPort != ProfileSettings::read(*settings, ProfileSettings::ServerPort)
+        || oldProtocol != ProfileSettings::read(*settings, ProfileSettings::Protocol)
+        || oldAuthType != ProfileSettings::read(*settings, ProfileSettings::AuthType)
         || oldEasyConnectAuthType
-            != settings->value("ZJUConnect/EasyConnectAuthType").toString()
-        || oldLoginDomain != settings->value("ZJUConnect/LoginDomain").toString()
-        || oldLoginUrl != settings->value("ZJUConnect/LoginURL").toString();
+            != ProfileSettings::easyConnectAuthType(*settings)
+        || oldLoginDomain != ProfileSettings::read(*settings, ProfileSettings::LoginDomain)
+        || oldLoginUrl != ProfileSettings::read(*settings, ProfileSettings::LoginURL);
     if (authenticationSettingsChanged)
     {
         ApplicationPaths::clearClientData(currentProfileId);
@@ -1004,7 +1000,7 @@ void MainWindow::upgradeSettings()
     if (action == SettingsMigrationAction::MigrateAutoStart)
     {
         profileService->migrateAutoStartSetting(
-            settings->value("Common/AutoStart", false).toBool()
+            ProfileSettings::read(*settings, ProfileSettings::LegacyAutoStart)
         );
     }
     else if (action == SettingsMigrationAction::RecommendReset)
@@ -1059,11 +1055,12 @@ void MainWindow::showNotification(const QString &title, const QString &content, 
 void MainWindow::cleanUpWhenQuit()
 {
     // 保存配置
-    if (settings->value("Common/ConfigVersion", 0).toInt() <=
+    if (ProfileSettings::read(*settings, ProfileSettings::ConfigVersion) <=
         ApplicationConstants::ConfigVersion)
     {
-        settings->setValue(
-            "Common/ConfigVersion",
+        ProfileSettings::write(
+            *settings,
+            ProfileSettings::ConfigVersion,
             ApplicationConstants::ConfigVersion
         );
     }

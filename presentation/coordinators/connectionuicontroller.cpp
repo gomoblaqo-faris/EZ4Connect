@@ -13,6 +13,7 @@
 
 #include "application/applicationlogger.h"
 #include "application/connectionsession.h"
+#include "application/profilesettings.h"
 #include "application/systemproxysession.h"
 #include "infrastructure/coreprocess/coreexecutable.h"
 #include "infrastructure/platform/privileges.h"
@@ -70,10 +71,8 @@ ConnectionUiController::ConnectionUiController(
         {
             if (saveDetails)
             {
-                settings()->setValue("Credential/Username", username);
-                settings()->setValue(
-                    "Credential/Password",
-                    QString(password.toUtf8().toBase64())
+                ProfileSettings::write(*settings(), ProfileSettings::Username, username);
+                ProfileSettings::write(*settings(), ProfileSettings::Password, password
                 );
                 settings()->sync();
             }
@@ -92,16 +91,14 @@ ConnectionUiController::ConnectionUiController(
         {
             if (saveDetails)
             {
-                settings()->setValue("ZJUConnect/PhoneCountryCode", countryCode);
-                settings()->setValue("ZJUConnect/PhoneNumber", phoneNumber);
+                ProfileSettings::write(*settings(), ProfileSettings::PhoneCountryCode, countryCode);
+                ProfileSettings::write(*settings(), ProfileSettings::PhoneNumber, phoneNumber);
                 settings()->sync();
             }
 
             const QString username =
-                settings()->value("Credential/Username", "").toString();
-            const QString password = QByteArray::fromBase64(
-                settings()->value("Credential/Password", "").toString().toUtf8()
-            );
+                ProfileSettings::read(*settings(), ProfileSettings::Username);
+            const QString password = ProfileSettings::read(*settings(), ProfileSettings::Password);
             startConnection(
                 username,
                 password,
@@ -212,31 +209,23 @@ void ConnectionUiController::handleConnectClicked()
         return;
     }
 
-    if (settings()->contains("ZJUConnect/ServerAddress") &&
-        settings()->value("ZJUConnect/ServerAddress").toString().isEmpty())
+    if (ProfileSettings::read(*settings(), ProfileSettings::ServerAddress).isEmpty())
     {
         QMessageBox::critical(parentWidget, "Error", "The server address is required.");
         return;
     }
 
-    const QString username = settings()->value("Credential/Username", "").toString();
-    const QString password = QByteArray::fromBase64(
-        settings()->value("Credential/Password", "").toString().toUtf8()
-    );
+    const QString username = ProfileSettings::read(*settings(), ProfileSettings::Username);
+    const QString password = ProfileSettings::read(*settings(), ProfileSettings::Password);
     const QString protocol =
-        settings()->value("ZJUConnect/Protocol", "easyconnect").toString();
+        ProfileSettings::read(*settings(), ProfileSettings::Protocol);
     const QString authType =
-        settings()->value("ZJUConnect/AuthType", "psw").toString();
-    const QString easyconnectAuthType = settings()->value(
-        "ZJUConnect/EasyConnectAuthType",
-        settings()->value("Credential/CertFile", "").toString().isEmpty()
-            ? "password"
-            : "certificate"
-    ).toString();
+        ProfileSettings::read(*settings(), ProfileSettings::AuthType);
+    const QString easyconnectAuthType = ProfileSettings::easyConnectAuthType(*settings());
 
     if (protocol == "easyconnect"
         && easyconnectAuthType == "certificate"
-        && settings()->value("Credential/CertFile", "").toString().isEmpty())
+        && ProfileSettings::read(*settings(), ProfileSettings::CertFile).isEmpty())
     {
         QMessageBox::information(
             parentWidget,
@@ -248,7 +237,7 @@ void ConnectionUiController::handleConnectClicked()
     }
 
 #if defined(Q_OS_WIN)
-    if (settings()->value("ZJUConnect/TUNMode").toBool() &&
+    if (ProfileSettings::read(*settings(), ProfileSettings::TUNMode) &&
         !Privileges::isElevated())
     {
         if (Privileges::relaunchElevated())
@@ -272,14 +261,14 @@ void ConnectionUiController::handleConnectClicked()
         (protocol == "easyconnect" && easyconnectAuthType != "certificate");
     if (protocol == "atrust" && authType == "smsCheckCode")
     {
-        QString countryCode = settings()
-            ->value("ZJUConnect/PhoneCountryCode", "86")
-            .toString()
-            .trimmed();
-        const QString phoneNumber = settings()
-            ->value("ZJUConnect/PhoneNumber", "")
-            .toString()
-            .trimmed();
+        QString countryCode = ProfileSettings::read(
+            *settings(),
+            ProfileSettings::PhoneCountryCode
+        ).trimmed();
+        const QString phoneNumber = ProfileSettings::read(
+            *settings(),
+            ProfileSettings::PhoneNumber
+        ).trimmed();
         if (countryCode.isEmpty() || phoneNumber.isEmpty())
         {
             if (countryCode.isEmpty())
@@ -330,7 +319,7 @@ void ConnectionUiController::handleConnectionStateChanged(ConnectionState state)
         if (!proxyIntentInitialised)
         {
             proxyIntentInitialised = true;
-            proxyWanted = settings()->value("Common/AutoSetProxy", false).toBool();
+            proxyWanted = ProfileSettings::read(*settings(), ProfileSettings::AutoSetProxy);
         }
         proxyButton->show();
         syncSystemProxy();
@@ -368,12 +357,12 @@ void ConnectionUiController::syncSystemProxy()
 
 void ConnectionUiController::enableSystemProxy()
 {
-    const int httpPort = settings()->value("ZJUConnect/HTTPPort").toInt();
-    const int socksPort = settings()->value("ZJUConnect/SOCKS5Port").toInt();
+    const int httpPort = ProfileSettings::read(*settings(), ProfileSettings::HTTPPort);
+    const int socksPort = ProfileSettings::read(*settings(), ProfileSettings::SOCKS5Port);
     const SystemProxyConfig proxyConfig{
         httpPort,
         socksPort,
-        settings()->value("Common/SystemProxyBypass").toString()
+        ProfileSettings::read(*settings(), ProfileSettings::SystemProxyBypass)
     };
     connect(
         systemProxySession,
@@ -392,10 +381,7 @@ void ConnectionUiController::enableSystemProxy()
             }
 
             if (conflict &&
-                !settings()->value(
-                    "Common/SuppressProxyOverrideWarning",
-                    false
-                ).toBool())
+                !ProfileSettings::read(*settings(), ProfileSettings::SuppressProxyOverrideWarning))
             {
                 QMessageBox messageBox(
                     QMessageBox::Warning,
@@ -414,9 +400,7 @@ void ConnectionUiController::enableSystemProxy()
                 }
                 if (dontShowCheckBox->isChecked())
                 {
-                    settings()->setValue(
-                        "Common/SuppressProxyOverrideWarning",
-                        true
+                    ProfileSettings::write(*settings(), ProfileSettings::SuppressProxyOverrideWarning, true
                     );
                     settings()->sync();
                 }
@@ -460,8 +444,8 @@ void ConnectionUiController::startConnection(
     }
     profile.program = CoreExecutable::path();
     const ReconnectPolicy reconnectPolicy{
-        settings()->value("Common/AutoReconnect", false).toBool(),
-        settings()->value("Common/ReconnectTime", 1).toInt() * 1000
+        ProfileSettings::read(*settings(), ProfileSettings::AutoReconnect),
+        ProfileSettings::read(*settings(), ProfileSettings::ReconnectTime) * 1000
     };
     if (!connectionSession->start(profile, reconnectPolicy)
         || !connectionSession->isActive())

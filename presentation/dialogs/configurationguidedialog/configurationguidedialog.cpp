@@ -20,6 +20,7 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
+#include "application/profilesettings.h"
 #include "presentation/dialogs/authinfowindow/authinfowindow.h"
 
 namespace
@@ -84,10 +85,7 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
         &ConfigurationGuideDialog::updateNavigation
     );
 
-    const QString protocol = sourceSettings->value(
-        "ZJUConnect/Protocol",
-        "atrust"
-    ).toString();
+    const QString protocol = ProfileSettings::read(*sourceSettings, ProfileSettings::Protocol);
     if (protocol == "easyconnect")
     {
         easyconnectRadioButton->setChecked(true);
@@ -98,17 +96,12 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     }
 
     selectAuthenticationMethod(
-        sourceSettings->value("ZJUConnect/AuthType", "psw").toString(),
-        sourceSettings->value("ZJUConnect/LoginDomain").toString(),
-        sourceSettings->value("ZJUConnect/LoginURL").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::AuthType),
+        ProfileSettings::read(*sourceSettings, ProfileSettings::LoginDomain),
+        ProfileSettings::read(*sourceSettings, ProfileSettings::LoginURL)
     );
 
-    const QString easyconnectAuthType = sourceSettings->value(
-        "ZJUConnect/EasyConnectAuthType",
-        sourceSettings->value("Credential/CertFile").toString().isEmpty()
-            ? "password"
-            : "certificate"
-    ).toString();
+    const QString easyconnectAuthType = ProfileSettings::easyConnectAuthType(*sourceSettings);
     certificateAuthenticationRadioButton->setChecked(
         easyconnectAuthType == "certificate"
     );
@@ -117,27 +110,23 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     );
 
     usernameLineEdit->setText(
-        sourceSettings->value("Credential/Username").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::Username)
     );
-    passwordLineEdit->setText(QByteArray::fromBase64(
-        sourceSettings->value("Credential/Password").toByteArray()
-    ));
+    passwordLineEdit->setText(ProfileSettings::read(*sourceSettings, ProfileSettings::Password));
     totpSecretLineEdit->setText(
-        sourceSettings->value("Credential/TOTPSecret").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::TOTPSecret)
     );
     certificateTotpSecretLineEdit->setText(totpSecretLineEdit->text());
     countryCodeLineEdit->setText(
-        sourceSettings->value("ZJUConnect/PhoneCountryCode", "86").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::PhoneCountryCode)
     );
     phoneNumberLineEdit->setText(
-        sourceSettings->value("ZJUConnect/PhoneNumber").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::PhoneNumber)
     );
     certificateFileLineEdit->setText(
-        sourceSettings->value("Credential/CertFile").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::CertFile)
     );
-    certificatePasswordLineEdit->setText(QByteArray::fromBase64(
-        sourceSettings->value("Credential/CertPassword").toByteArray()
-    ));
+    certificatePasswordLineEdit->setText(ProfileSettings::read(*sourceSettings, ProfileSettings::CertPassword));
 
     updateProtocolPage();
     updateNavigation();
@@ -145,53 +134,35 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
 
 void ConfigurationGuideDialog::applyTo(QSettings &settings) const
 {
-    settings.setValue(
-        "ZJUConnect/ServerAddress",
-        serverAddressLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::ServerAddress, serverAddressLineEdit->text().trimmed()
     );
-    settings.setValue("ZJUConnect/ServerPort", serverPortSpinBox->value());
-    settings.setValue(
-        "Credential/Username",
-        usernameLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::ServerPort, serverPortSpinBox->value());
+    ProfileSettings::write(settings, ProfileSettings::Username, usernameLineEdit->text().trimmed()
     );
-    settings.setValue(
-        "Credential/Password",
-        QString(passwordLineEdit->text().toUtf8().toBase64())
+    ProfileSettings::write(settings, ProfileSettings::Password, passwordLineEdit->text()
     );
-    settings.setValue(
-        "Credential/TOTPSecret",
-        totpSecretLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::TOTPSecret, totpSecretLineEdit->text().trimmed()
     );
-    settings.setValue(
-        "Credential/CertFile",
-        certificateFileLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::CertFile, certificateFileLineEdit->text().trimmed()
     );
-    settings.setValue(
-        "Credential/CertPassword",
-        QString(certificatePasswordLineEdit->text().toUtf8().toBase64())
+    ProfileSettings::write(settings, ProfileSettings::CertPassword, certificatePasswordLineEdit->text()
     );
-    settings.setValue(
-        "ZJUConnect/PhoneCountryCode",
-        countryCodeLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::PhoneCountryCode, countryCodeLineEdit->text().trimmed()
     );
-    settings.setValue(
-        "ZJUConnect/PhoneNumber",
-        phoneNumberLineEdit->text().trimmed()
+    ProfileSettings::write(settings, ProfileSettings::PhoneNumber, phoneNumberLineEdit->text().trimmed()
     );
 
     if (atrustRadioButton->isChecked())
     {
-        settings.setValue("ZJUConnect/Protocol", "atrust");
-        settings.setValue("ZJUConnect/AuthType", selectedAuthType);
-        settings.setValue("ZJUConnect/LoginDomain", selectedLoginDomain);
-        settings.setValue("ZJUConnect/LoginURL", selectedLoginUrl);
+        ProfileSettings::write(settings, ProfileSettings::Protocol, "atrust");
+        ProfileSettings::write(settings, ProfileSettings::AuthType, selectedAuthType);
+        ProfileSettings::write(settings, ProfileSettings::LoginDomain, selectedLoginDomain);
+        ProfileSettings::write(settings, ProfileSettings::LoginURL, selectedLoginUrl);
     }
     else
     {
-        settings.setValue("ZJUConnect/Protocol", "easyconnect");
-        settings.setValue(
-            "ZJUConnect/EasyConnectAuthType",
-            certificateAuthenticationRadioButton->isChecked()
+        ProfileSettings::write(settings, ProfileSettings::Protocol, "easyconnect");
+        ProfileSettings::write(settings, ProfileSettings::EasyConnectAuthType, certificateAuthenticationRadioButton->isChecked()
                 ? "certificate"
                 : "password"
         );
@@ -209,14 +180,14 @@ QWidget *ConfigurationGuideDialog::createServerPage()
     serverAddressLineEdit = new QLineEdit(page);
     serverAddressLineEdit->setPlaceholderText("e.g. vpn.example.edu.cn");
     serverAddressLineEdit->setText(
-        sourceSettings->value("ZJUConnect/ServerAddress").toString()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::ServerAddress)
     );
     formLayout->addRow("Server address", serverAddressLineEdit);
 
     serverPortSpinBox = new QSpinBox(page);
     serverPortSpinBox->setRange(1, 65535);
     serverPortSpinBox->setValue(
-        sourceSettings->value("ZJUConnect/ServerPort", 443).toInt()
+        ProfileSettings::read(*sourceSettings, ProfileSettings::ServerPort)
     );
     formLayout->addRow("Server port", serverPortSpinBox);
 

@@ -227,6 +227,14 @@ if(BUILD_TESTING)
     target_link_libraries(settingsmigrator_test Qt::Core)
     add_test(NAME settingsmigrator_test COMMAND settingsmigrator_test)
 
+    add_executable(profilesettings_test
+        tests/profilesettings_test.cpp
+        application/defaultsettings.cpp
+    )
+    target_include_directories(profilesettings_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(profilesettings_test Qt::Core)
+    add_test(NAME profilesettings_test COMMAND profilesettings_test)
+
     add_executable(profileservice_test
         tests/profileservice_test.cpp
         application/profileservice.cpp

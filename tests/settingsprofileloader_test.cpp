@@ -143,11 +143,39 @@ bool usesCompatibleDefaults()
         && !profile.debug.detailedOutput
         && !profile.debug.capturePcap
         && !profile.debug.exportTlsKeys
-        && profile.proxy.socksBind == "127.0.0.1:0"
-        && profile.proxy.httpBind == "127.0.0.1:0";
+        // A profile from before a setting existed gets a usable value for
+        // it, not zero.
+        && profile.proxy.socksBind == "127.0.0.1:11080"
+        && profile.proxy.httpBind == "127.0.0.1:11081"
+        && profile.endpoint.port == 443
+        && profile.dns.ttl == 3600
+        // Profiles older than aTrust support are EasyConnect, and their
+        // DNS field was never overridden by an automatic mode.
+        && profile.endpoint.protocol == "easyconnect"
+        && !profile.dns.automatic;
     if (!passed)
     {
         qCritical() << "usesCompatibleDefaults failed";
+    }
+    return passed;
+}
+
+bool fillsMissingKeysTheWayTheUiAssumesThem()
+{
+    QTemporaryDir directory;
+    QSettings settings(directory.filePath("partial.ini"), QSettings::IniFormat);
+    settings.setValue("ZJUConnect/Protocol", "atrust");
+    settings.setValue("ZJUConnect/PhoneNumber", "13800000000");
+
+    // The connect flow treats a missing authentication type as password
+    // login and a missing country code as 86, so the core has to be told
+    // the same thing rather than left to its own defaults.
+    const ConnectionProfile profile = SettingsProfileLoader::load(settings, "", "", "");
+    const bool passed = profile.endpoint.authType == "psw"
+        && profile.endpoint.phone == "86-13800000000";
+    if (!passed)
+    {
+        qCritical() << "fillsMissingKeysTheWayTheUiAssumesThem failed";
     }
     return passed;
 }
@@ -192,5 +220,6 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
     return loadsSettingsIntoTypedProfile()
         && usesCompatibleDefaults()
+        && fillsMissingKeysTheWayTheUiAssumesThem()
         && respectsEasyConnectAuthenticationMode() ? 0 : 1;
 }

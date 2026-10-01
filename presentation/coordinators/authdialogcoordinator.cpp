@@ -14,6 +14,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "application/profilesettings.h"
 #include "presentation/dialogs/graphcaptchawindow/graphcaptchawindow.h"
 #include "presentation/dialogs/loginwindow/loginwindow.h"
 #include "presentation/dialogs/ssologinwebview/ssologinwebview.h"
@@ -162,7 +163,7 @@ void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile)
 {
     qInfo().noquote() << "Captcha required";
     const bool textInputMode = settings == nullptr
-        || settings->value("ZJUConnect/Protocol", "easyconnect").toString() == "easyconnect";
+        || ProfileSettings::read(*settings, ProfileSettings::Protocol) == "easyconnect";
     if (graphCaptchaWindow != nullptr)
     {
         graphCaptchaWindow->setGraph(graphFile, textInputMode);
@@ -314,8 +315,8 @@ void AuthDialogCoordinator::requestSsoLogin()
     }
 
     const QString serverHost =
-        settings->value("ZJUConnect/ServerAddress", "trust.hitsz.edu.cn").toString();
-    const int serverPort = settings->value("ZJUConnect/ServerPort", 443).toInt();
+        ProfileSettings::read(*settings, ProfileSettings::ServerAddress);
+    const int serverPort = ProfileSettings::read(*settings, ProfileSettings::ServerPort);
     QUrl serverUrl;
     serverUrl.setScheme("https");
     serverUrl.setHost(serverHost);
@@ -324,7 +325,7 @@ void AuthDialogCoordinator::requestSsoLogin()
         serverUrl.setPort(serverPort);
     }
 
-    QString ssoUrl = settings->value("ZJUConnect/LoginURL").toString();
+    QString ssoUrl = ProfileSettings::read(*settings, ProfileSettings::LoginURL);
     if (ssoUrl.isEmpty())
     {
         QUrl defaultSsoUrl = serverUrl;
@@ -332,7 +333,7 @@ void AuthDialogCoordinator::requestSsoLogin()
         QUrlQuery query;
         query.addQueryItem(
             "sfDomain",
-            settings->value("ZJUConnect/LoginDomain").toString()
+            ProfileSettings::read(*settings, ProfileSettings::LoginDomain)
         );
         defaultSsoUrl.setQuery(query);
         ssoUrl = defaultSsoUrl.toString();

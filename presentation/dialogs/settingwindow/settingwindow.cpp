@@ -9,6 +9,7 @@
 #include "ui_settingwindow.h"
 #include "application/applicationconstants.h"
 #include "application/defaultsettings.h"
+#include "application/profilesettings.h"
 #include "infrastructure/platform/autostart.h"
 #include "infrastructure/storage/applicationpaths.h"
 #include "presentation/presentationhelpers.h"
@@ -204,60 +205,60 @@ bool SettingWindow::shouldCheckCredential()
 void SettingWindow::loadSettings()
 {
     ui->configVersionLabel->setText(
-        "Profile config version: " + QString::number(settings->value("Common/ConfigVersion").toInt()) +
+        "Profile config version: " + QString::number(ProfileSettings::read(*settings, ProfileSettings::ConfigVersion)) +
         "\nApp config version: " +
         QString::number(ApplicationConstants::ConfigVersion)
     );
-    ui->usernameLineEdit->setText(settings->value("Credential/Username").toString());
+    ui->usernameLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::Username));
     ui->passwordLineEdit->setText(
-        QByteArray::fromBase64(settings->value("Credential/Password").toString().toUtf8())
+        ProfileSettings::read(*settings, ProfileSettings::Password)
     );
-    ui->totpSecretLineEdit->setText(settings->value("Credential/TOTPSecret").toString());
-    ui->certFileLineEdit->setText(settings->value("Credential/CertFile").toString());
+    ui->totpSecretLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::TOTPSecret));
+    ui->certFileLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::CertFile));
     ui->certPasswordLineEdit->setText(
-        QByteArray::fromBase64(settings->value("Credential/CertPassword").toString().toUtf8())
+        ProfileSettings::read(*settings, ProfileSettings::CertPassword)
     );
     ui->credentialsAsArgumentsCheckBox->setChecked(
-        settings->value("ZJUConnect/CredentialsAsArguments", false).toBool()
+        ProfileSettings::read(*settings, ProfileSettings::CredentialsAsArguments)
     );
 
     ProfileManager profileManager;
     ui->autoStartCheckBox->setChecked(profileManager.autoStartEnabled());
     ui->silentStartCheckBox->setChecked(profileManager.silentStartEnabled());
-    ui->connectAfterStartCheckBox->setChecked(settings->value("Common/ConnectAfterStart").toBool());
-    ui->checkUpdateAfterStartCheckBox->setChecked(settings->value("Common/CheckUpdateAfterStart").toBool());
-    ui->autoSetProxyCheckBox->setChecked(settings->value("Common/AutoSetProxy").toBool());
-    ui->reconnectTimeSpinBox->setValue(settings->value("Common/ReconnectTime").toInt());
-    ui->autoReconnectCheckBox->setChecked(settings->value("Common/AutoReconnect").toBool());
-	ui->systemProxyBypassLineEdit->setText(settings->value("Common/SystemProxyBypass").toString());
-    ui->suppressProxyOverrideWarningCheckBox->setChecked(settings->value("Common/SuppressProxyOverrideWarning", false).toBool());
+    ui->connectAfterStartCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::ConnectAfterStart));
+    ui->checkUpdateAfterStartCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::CheckUpdateAfterStart));
+    ui->autoSetProxyCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::AutoSetProxy));
+    ui->reconnectTimeSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::ReconnectTime));
+    ui->autoReconnectCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::AutoReconnect));
+	ui->systemProxyBypassLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::SystemProxyBypass));
+    ui->suppressProxyOverrideWarningCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::SuppressProxyOverrideWarning));
 
 
-    ui->serverAddressLineEdit->setText(settings->value("ZJUConnect/ServerAddress").toString());
-    ui->serverPortSpinBox->setValue(settings->value("ZJUConnect/ServerPort").toInt());
-    ui->dnsLineEdit->setText(settings->value("ZJUConnect/DNS").toString());
-    ui->dnsAutoCheckBox->setChecked(settings->value("ZJUConnect/DNSAuto").toBool());
-    ui->secondaryDnsLineEdit->setText(settings->value("ZJUConnect/SecondaryDNS").toString());
+    ui->serverAddressLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::ServerAddress));
+    ui->serverPortSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::ServerPort));
+    ui->dnsLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::DNS));
+    ui->dnsAutoCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::DNSAuto));
+    ui->secondaryDnsLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::SecondaryDNS));
     ui->localDnsServerLineEdit->setText(
-        settings->value("ZJUConnect/LocalDNSServer", "").toString()
+        ProfileSettings::read(*settings, ProfileSettings::LocalDNSServer)
     );
     ui->dnsServerBindLineEdit->setText(
-        settings->value("ZJUConnect/DNSServerBind", "").toString()
+        ProfileSettings::read(*settings, ProfileSettings::DNSServerBind)
     );
-    ui->dnsTTLSpinBox->setValue(settings->value("ZJUConnect/DNSTTL").toInt());
-    ui->socks5PortSpinBox->setValue(settings->value("ZJUConnect/SOCKS5Port").toInt());
-    ui->httpPortSpinBox->setValue(settings->value("ZJUConnect/HTTPPort").toInt());
-    ui->shadowsocksUrlLineEdit->setText(settings->value("ZJUConnect/ShadowsocksURL").toString());
-    ui->dialDirectProxyLineEdit->setText(settings->value("ZJUConnect/DialDirectProxy").toString());
+    ui->dnsTTLSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::DNSTTL));
+    ui->socks5PortSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::SOCKS5Port));
+    ui->httpPortSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::HTTPPort));
+    ui->shadowsocksUrlLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::ShadowsocksURL));
+    ui->dialDirectProxyLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::DialDirectProxy));
     ui->updateBestNodesIntervalSpinBox->setValue(
-        settings->value("ZJUConnect/UpdateBestNodesInterval", 300).toInt());
+        ProfileSettings::read(*settings, ProfileSettings::UpdateBestNodesInterval));
 
-    if (settings->value("ZJUConnect/Protocol").toString() == "atrust")
+    if (ProfileSettings::read(*settings, ProfileSettings::Protocol) == "atrust")
         ui->atrustRadioButton->setChecked(true);
     else
         ui->easyconnectRadioButton->setChecked(true);
-    ui->loginDomainLineEdit->setText(settings->value("ZJUConnect/LoginDomain").toString());
-    auto authType = settings->value("ZJUConnect/AuthType").toString();
+    ui->loginDomainLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::LoginDomain));
+    auto authType = ProfileSettings::read(*settings, ProfileSettings::AuthType);
     if (authType == "smsCheckCode")
         ui->smsCheckCodeRadioButton->setChecked(true);
     else if (authType == "cas")
@@ -266,42 +267,42 @@ void SettingWindow::loadSettings()
         ui->oauth2RadioButton->setChecked(true);
     else
         ui->pswRadioButton->setChecked(true);
-    ui->loginUrlLineEdit->setText(settings->value("ZJUConnect/LoginURL").toString());
-    ui->countryCodeLineEdit->setText(settings->value("ZJUConnect/PhoneCountryCode").toString());
-    ui->phoneNumberLineEdit->setText(settings->value("ZJUConnect/PhoneNumber").toString());
+    ui->loginUrlLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::LoginURL));
+    ui->countryCodeLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::PhoneCountryCode));
+    ui->phoneNumberLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::PhoneNumber));
 
-    ui->multiLineCheckBox->setChecked(settings->value("ZJUConnect/MultiLine").toBool());
-    ui->keepAliveCheckBox->setChecked(settings->value("ZJUConnect/KeepAlive").toBool());
-    ui->keepAliveUrlLineEdit->setText(settings->value("ZJUConnect/KeepAliveURL", "").toString());
-    ui->bindInterfaceLineEdit->setText(settings->value("ZJUConnect/BindInterface", "").toString());
-    ui->outsideAccessCheckBox->setChecked(settings->value("ZJUConnect/OutsideAccess").toBool());
+    ui->multiLineCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::MultiLine));
+    ui->keepAliveCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::KeepAlive));
+    ui->keepAliveUrlLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::KeepAliveURL));
+    ui->bindInterfaceLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::BindInterface));
+    ui->outsideAccessCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::OutsideAccess));
 
-    ui->skipDomainResourceCheckBox->setChecked(settings->value("ZJUConnect/SkipDomainResource").toBool());
-    ui->disableServerConfigCheckBox->setChecked(settings->value("ZJUConnect/DisableServerConfig").toBool());
-    ui->proxyAllCheckBox->setChecked(settings->value("ZJUConnect/ProxyAll").toBool());
+    ui->skipDomainResourceCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::SkipDomainResource));
+    ui->disableServerConfigCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::DisableServerConfig));
+    ui->proxyAllCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::ProxyAll));
     
-    ui->zjuDefaultCheckBox->setChecked(settings->value("ZJUConnect/ZJUDefault").toBool());
-    ui->disableDNSCheckBox->setChecked(settings->value("ZJUConnect/DisableZJUDNS").toBool());
-    ui->detailedDebugCheckBox->setChecked(settings->value("ZJUConnect/Debug").toBool());
+    ui->zjuDefaultCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::ZJUDefault));
+    ui->disableDNSCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::DisableZJUDNS));
+    ui->detailedDebugCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::Debug));
     ui->debugPcapCheckBox->setChecked(
-        settings->value("ZJUConnect/DebugPCAP", false).toBool()
+        ProfileSettings::read(*settings, ProfileSettings::DebugPCAP)
     );
     ui->debugTlsLogCheckBox->setChecked(
-        settings->value("ZJUConnect/DebugTLSLog", false).toBool()
+        ProfileSettings::read(*settings, ProfileSettings::DebugTLSLog)
     );
 
-    ui->tunCheckBox->setChecked(settings->value("ZJUConnect/TUNMode").toBool());
-    ui->routeCheckBox->setChecked(settings->value("ZJUConnect/AddRoute").toBool());
-    ui->dnsHijackCheckBox->setChecked(settings->value("ZJUConnect/DNSHijack").toBool());
-    ui->fakeIPCheckBox->setChecked(settings->value("ZJUConnect/FakeIP").toBool());
-    ui->tcpTunnelModeCheckBox->setChecked(settings->value("ZJUConnect/TCPTunnelMode").toBool());
-    ui->autoDetectInterfaceCheckBox->setChecked(settings->value("ZJUConnect/AutoDetectInterface", false).toBool());
+    ui->tunCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::TUNMode));
+    ui->routeCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::AddRoute));
+    ui->dnsHijackCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::DNSHijack));
+    ui->fakeIPCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::FakeIP));
+    ui->tcpTunnelModeCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::TCPTunnelMode));
+    ui->autoDetectInterfaceCheckBox->setChecked(ProfileSettings::read(*settings, ProfileSettings::AutoDetectInterface));
 
-    tcpPortForwarding = settings->value("ZJUConnect/TCPPortForwarding").toString();
-    udpPortForwarding = settings->value("ZJUConnect/UDPPortForwarding").toString();
-	customDNS = settings->value("ZJUConnect/CustomDNS").toString();
-	customProxyDomain = settings->value("ZJUConnect/CustomProxyDomain").toString();
-    extraArguments = settings->value("ZJUConnect/ExtraArguments").toString();
+    tcpPortForwarding = ProfileSettings::read(*settings, ProfileSettings::TCPPortForwarding);
+    udpPortForwarding = ProfileSettings::read(*settings, ProfileSettings::UDPPortForwarding);
+	customDNS = ProfileSettings::read(*settings, ProfileSettings::CustomDNS);
+	customProxyDomain = ProfileSettings::read(*settings, ProfileSettings::CustomProxyDomain);
+    extraArguments = ProfileSettings::read(*settings, ProfileSettings::ExtraArguments);
 
     ui->routeCheckBox->setEnabled(ui->tunCheckBox->isChecked());
     ui->dnsHijackCheckBox->setEnabled(ui->tunCheckBox->isChecked());
@@ -335,51 +336,43 @@ void SettingWindow::applySettings()
     }
     profileManager.setSilentStartEnabled(ui->silentStartCheckBox->isChecked());
 
-    settings->setValue("Credential/Username", ui->usernameLineEdit->text());
-    settings->setValue("Credential/Password", QString(ui->passwordLineEdit->text().toUtf8().toBase64()));
-    settings->setValue("Credential/TOTPSecret", ui->totpSecretLineEdit->text());
-    settings->setValue("Credential/CertFile", ui->certFileLineEdit->text());
-    settings->setValue("Credential/CertPassword", QString(ui->certPasswordLineEdit->text().toUtf8().toBase64()));
-    settings->setValue(
-        "ZJUConnect/CredentialsAsArguments",
-        ui->credentialsAsArgumentsCheckBox->isChecked()
+    ProfileSettings::write(*settings, ProfileSettings::Username, ui->usernameLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::Password, ui->passwordLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::TOTPSecret, ui->totpSecretLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::CertFile, ui->certFileLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::CertPassword, ui->certPasswordLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::CredentialsAsArguments, ui->credentialsAsArgumentsCheckBox->isChecked()
     );
 
-    settings->setValue("Common/ConnectAfterStart", ui->connectAfterStartCheckBox->isChecked());
-    settings->setValue("Common/CheckUpdateAfterStart", ui->checkUpdateAfterStartCheckBox->isChecked());
-    settings->setValue("Common/AutoSetProxy", ui->autoSetProxyCheckBox->isChecked());
-    settings->setValue("Common/ReconnectTime", ui->reconnectTimeSpinBox->value());
-    settings->setValue("Common/AutoReconnect", ui->autoReconnectCheckBox->isChecked());
-    settings->setValue("Common/SystemProxyBypass", ui->systemProxyBypassLineEdit->text());
-    settings->setValue("Common/SuppressProxyOverrideWarning", ui->suppressProxyOverrideWarningCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::ConnectAfterStart, ui->connectAfterStartCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::CheckUpdateAfterStart, ui->checkUpdateAfterStartCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::AutoSetProxy, ui->autoSetProxyCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::ReconnectTime, ui->reconnectTimeSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::AutoReconnect, ui->autoReconnectCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::SystemProxyBypass, ui->systemProxyBypassLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::SuppressProxyOverrideWarning, ui->suppressProxyOverrideWarningCheckBox->isChecked());
 
 
-    settings->setValue("ZJUConnect/ServerAddress", ui->serverAddressLineEdit->text());
-    settings->setValue("ZJUConnect/ServerPort", ui->serverPortSpinBox->value());
-    settings->setValue("ZJUConnect/DNS", ui->dnsLineEdit->text());
-    settings->setValue("ZJUConnect/DNSAuto", ui->dnsAutoCheckBox->isChecked());
-    settings->setValue("ZJUConnect/SecondaryDNS", ui->secondaryDnsLineEdit->text());
-    settings->setValue(
-        "ZJUConnect/LocalDNSServer",
-        ui->localDnsServerLineEdit->text().trimmed()
+    ProfileSettings::write(*settings, ProfileSettings::ServerAddress, ui->serverAddressLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::ServerPort, ui->serverPortSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::DNS, ui->dnsLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::DNSAuto, ui->dnsAutoCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::SecondaryDNS, ui->secondaryDnsLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::LocalDNSServer, ui->localDnsServerLineEdit->text().trimmed()
     );
-    settings->setValue(
-        "ZJUConnect/DNSServerBind",
-        ui->dnsServerBindLineEdit->text().trimmed()
+    ProfileSettings::write(*settings, ProfileSettings::DNSServerBind, ui->dnsServerBindLineEdit->text().trimmed()
     );
-    settings->setValue("ZJUConnect/DNSTTL", ui->dnsTTLSpinBox->value());
-    settings->setValue("ZJUConnect/SOCKS5Port", ui->socks5PortSpinBox->value());
-    settings->setValue("ZJUConnect/HTTPPort", ui->httpPortSpinBox->value());
-    settings->setValue("ZJUConnect/ShadowsocksURL", ui->shadowsocksUrlLineEdit->text());
-    settings->setValue("ZJUConnect/DialDirectProxy", ui->dialDirectProxyLineEdit->text());
-    settings->setValue("ZJUConnect/UpdateBestNodesInterval", ui->updateBestNodesIntervalSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::DNSTTL, ui->dnsTTLSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::SOCKS5Port, ui->socks5PortSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::HTTPPort, ui->httpPortSpinBox->value());
+    ProfileSettings::write(*settings, ProfileSettings::ShadowsocksURL, ui->shadowsocksUrlLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::DialDirectProxy, ui->dialDirectProxyLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::UpdateBestNodesInterval, ui->updateBestNodesIntervalSpinBox->value());
 
-    settings->setValue("ZJUConnect/Protocol", ui->atrustRadioButton->isChecked() ? "atrust" : "easyconnect");
-    settings->setValue(
-        "ZJUConnect/EasyConnectAuthType",
-        ui->certFileLineEdit->text().isEmpty() ? "password" : "certificate"
+    ProfileSettings::write(*settings, ProfileSettings::Protocol, ui->atrustRadioButton->isChecked() ? "atrust" : "easyconnect");
+    ProfileSettings::write(*settings, ProfileSettings::EasyConnectAuthType, ui->certFileLineEdit->text().isEmpty() ? "password" : "certificate"
     );
-    settings->setValue("ZJUConnect/LoginDomain", ui->loginDomainLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::LoginDomain, ui->loginDomainLineEdit->text());
     QString authType;
     if (ui->smsCheckCodeRadioButton->isChecked())
         authType = "smsCheckCode";
@@ -389,44 +382,42 @@ void SettingWindow::applySettings()
         authType = "httpsOauth2";
     else
         authType = "psw";
-    settings->setValue("ZJUConnect/AuthType", authType);
-    settings->setValue("ZJUConnect/LoginURL", ui->loginUrlLineEdit->text());
-    settings->setValue("ZJUConnect/PhoneCountryCode", ui->countryCodeLineEdit->text());
-    settings->setValue("ZJUConnect/PhoneNumber", ui->phoneNumberLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::AuthType, authType);
+    ProfileSettings::write(*settings, ProfileSettings::LoginURL, ui->loginUrlLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::PhoneCountryCode, ui->countryCodeLineEdit->text());
+    ProfileSettings::write(*settings, ProfileSettings::PhoneNumber, ui->phoneNumberLineEdit->text());
 
-    settings->setValue("ZJUConnect/MultiLine", ui->multiLineCheckBox->isChecked());
-    settings->setValue("ZJUConnect/KeepAlive", ui->keepAliveCheckBox->isChecked());
-    settings->setValue("ZJUConnect/KeepAliveURL", ui->keepAliveUrlLineEdit->text().trimmed());
-    settings->setValue("ZJUConnect/BindInterface", ui->bindInterfaceLineEdit->text().trimmed());
-    settings->setValue("ZJUConnect/OutsideAccess", ui->outsideAccessCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::MultiLine, ui->multiLineCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::KeepAlive, ui->keepAliveCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::KeepAliveURL, ui->keepAliveUrlLineEdit->text().trimmed());
+    ProfileSettings::write(*settings, ProfileSettings::BindInterface, ui->bindInterfaceLineEdit->text().trimmed());
+    ProfileSettings::write(*settings, ProfileSettings::OutsideAccess, ui->outsideAccessCheckBox->isChecked());
 
-    settings->setValue("ZJUConnect/SkipDomainResource", ui->skipDomainResourceCheckBox->isChecked());
-    settings->setValue("ZJUConnect/DisableServerConfig", ui->disableServerConfigCheckBox->isChecked());
-    settings->setValue("ZJUConnect/ProxyAll", ui->proxyAllCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::SkipDomainResource, ui->skipDomainResourceCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::DisableServerConfig, ui->disableServerConfigCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::ProxyAll, ui->proxyAllCheckBox->isChecked());
 
-    settings->setValue("ZJUConnect/DisableZJUDNS", ui->disableDNSCheckBox->isChecked());
-    settings->setValue("ZJUConnect/ZJUDefault", ui->zjuDefaultCheckBox->isChecked());
-    settings->setValue("ZJUConnect/Debug", ui->detailedDebugCheckBox->isChecked());
-    settings->setValue("ZJUConnect/DebugPCAP", ui->debugPcapCheckBox->isChecked());
-    settings->setValue("ZJUConnect/DebugTLSLog", ui->debugTlsLogCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::DisableZJUDNS, ui->disableDNSCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::ZJUDefault, ui->zjuDefaultCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::Debug, ui->detailedDebugCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::DebugPCAP, ui->debugPcapCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::DebugTLSLog, ui->debugTlsLogCheckBox->isChecked());
 
-    settings->setValue("ZJUConnect/TUNMode", ui->tunCheckBox->isChecked());
-    settings->setValue("ZJUConnect/AddRoute", ui->routeCheckBox->isChecked());
-    settings->setValue("ZJUConnect/DNSHijack", ui->dnsHijackCheckBox->isChecked());
-    settings->setValue("ZJUConnect/FakeIP", ui->fakeIPCheckBox->isChecked());
-    settings->setValue("ZJUConnect/TCPTunnelMode", ui->tcpTunnelModeCheckBox->isChecked());
-    settings->setValue("ZJUConnect/AutoDetectInterface", ui->autoDetectInterfaceCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::TUNMode, ui->tunCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::AddRoute, ui->routeCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::DNSHijack, ui->dnsHijackCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::FakeIP, ui->fakeIPCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::TCPTunnelMode, ui->tcpTunnelModeCheckBox->isChecked());
+    ProfileSettings::write(*settings, ProfileSettings::AutoDetectInterface, ui->autoDetectInterfaceCheckBox->isChecked());
 
 
-    settings->setValue("ZJUConnect/TCPPortForwarding", tcpPortForwarding);
-    settings->setValue("ZJUConnect/UDPPortForwarding", udpPortForwarding);
-    settings->setValue("ZJUConnect/CustomDNS", customDNS);
-    settings->setValue("ZJUConnect/CustomProxyDomain", customProxyDomain);
-    settings->setValue("ZJUConnect/ExtraArguments", extraArguments);
+    ProfileSettings::write(*settings, ProfileSettings::TCPPortForwarding, tcpPortForwarding);
+    ProfileSettings::write(*settings, ProfileSettings::UDPPortForwarding, udpPortForwarding);
+    ProfileSettings::write(*settings, ProfileSettings::CustomDNS, customDNS);
+    ProfileSettings::write(*settings, ProfileSettings::CustomProxyDomain, customProxyDomain);
+    ProfileSettings::write(*settings, ProfileSettings::ExtraArguments, extraArguments);
 
-    settings->setValue(
-        "Common/ConfigVersion",
-        ApplicationConstants::ConfigVersion
+    ProfileSettings::write(*settings, ProfileSettings::ConfigVersion, ApplicationConstants::ConfigVersion
     );
 
     settings->sync();
@@ -435,10 +426,10 @@ void SettingWindow::applySettings()
 bool SettingWindow::isAuthSettingChanged()
 {
     if (ui->atrustRadioButton->isChecked() == false &&
-        settings->value("ZJUConnect/Protocol").toString() != "atrust")
+        ProfileSettings::read(*settings, ProfileSettings::Protocol) != "atrust")
         return false;
     if (ui->atrustRadioButton->isChecked() == true &&
-        settings->value("ZJUConnect/Protocol").toString() != "atrust")
+        ProfileSettings::read(*settings, ProfileSettings::Protocol) != "atrust")
         return true;
     QString currentAuthType;
     if (ui->casRadioButton->isChecked())
@@ -450,10 +441,10 @@ bool SettingWindow::isAuthSettingChanged()
     else
         currentAuthType = "psw";
 
-    return currentAuthType != settings->value("ZJUConnect/AuthType").toString() ||
-           ui->loginDomainLineEdit->text() != settings->value("ZJUConnect/LoginDomain").toString() ||
+    return currentAuthType != ProfileSettings::read(*settings, ProfileSettings::AuthType) ||
+           ui->loginDomainLineEdit->text() != ProfileSettings::read(*settings, ProfileSettings::LoginDomain) ||
            ((currentAuthType == "cas" || currentAuthType == "httpsOauth2") &&
-            ui->loginUrlLineEdit->text() != settings->value("ZJUConnect/LoginURL").toString()) ||
-           ui->serverAddressLineEdit->text() != settings->value("ZJUConnect/ServerAddress").toString() ||
-           ui->serverPortSpinBox->value() != settings->value("ZJUConnect/ServerPort").toInt();
+            ui->loginUrlLineEdit->text() != ProfileSettings::read(*settings, ProfileSettings::LoginURL)) ||
+           ui->serverAddressLineEdit->text() != ProfileSettings::read(*settings, ProfileSettings::ServerAddress) ||
+           ui->serverPortSpinBox->value() != ProfileSettings::read(*settings, ProfileSettings::ServerPort);
 }
