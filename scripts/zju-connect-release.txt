@@ -1,0 +1,13 @@
+# The zju-connect release that is bundled into packages, with the SHA-256 of
+# each archive. The core ends up running as root or administrator in TUN mode,
+# so the packaging scripts refuse an archive that does not match.
+#
+# To update: change the version and every checksum together, taking them from
+# https://github.com/Mythologyli/zju-connect/releases
+version v1.3.1
+zju-connect-darwin-amd64.zip 50e181be23af47b0dc73d838b6a121639ddd615a4cb908f9d518dbe270a6991f
+zju-connect-darwin-arm64.zip 1003088f144a178c3fe0b8ebb4e00ee93f2aa8a53876db97b521e5afc82cdba2
+zju-connect-linux-amd64.zip d7cd61a580b085570a364202c97d32fd9f07b38eb0dda75675a44067b9764238
+zju-connect-linux-arm64.zip 33c13ae0cc276a55d4777bd7bafc1e4bcc534143100306904e874ccba4fad625
+zju-connect-windows-amd64.zip e14de6f0ede80f5ad9b6b865d33c61960206f27d02eb24f81643c709d97265c8
+zju-connect-windows-arm64.zip 3701487b9d03b14351fd38a14f7c5137be3bc17668557a6603221e56e5be5eff

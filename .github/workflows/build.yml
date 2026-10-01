@@ -31,10 +31,10 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'linux'
@@ -61,10 +61,10 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-windows-x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'windows'
@@ -98,7 +98,7 @@ jobs:
           Compress-Archive -Path "${{ env.DISPLAY_NAME }}" -DestinationPath ${{ env.ARCHIVE_NAME }}.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.zip
@@ -108,10 +108,10 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-windows-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install host Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'windows_arm64'
@@ -146,7 +146,7 @@ jobs:
           Compress-Archive -Path "${{ env.DISPLAY_NAME }}" -DestinationPath ${{ env.ARCHIVE_NAME }}.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.zip
@@ -156,10 +156,10 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-macos-x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'mac'
@@ -176,10 +176,10 @@ jobs:
         run: |
           mkdir build
           if ${{ env.NIGHTLY_BUILD }} ; then
-            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_OSX_ARCHITECTURES="x86_64" -S . -B build
+            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_BUILD_TYPE=Release -S . -B build
           else
             VER=${{ env.RELEASE_VERSION }}
-            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_OSX_ARCHITECTURES="x86_64" -S . -B build
+            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_OSX_ARCHITECTURES="x86_64" -DCMAKE_BUILD_TYPE=Release -S . -B build
           fi
 
       - name: Build
@@ -239,7 +239,7 @@ jobs:
 
       - name: Upload artifact (dmg)
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.dmg
@@ -250,7 +250,7 @@ jobs:
           tar -cvf ${{ env.ARCHIVE_NAME }}.tar ${{ env.TARGET_NAME }}.app
 
       - name: Upload artifact (tar)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         with:
           name: ${{ env.ARCHIVE_NAME }}
@@ -261,10 +261,10 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-macos-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'mac'
@@ -281,10 +281,10 @@ jobs:
         run: |
           mkdir build
           if ${{ env.NIGHTLY_BUILD }} ; then
-            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_OSX_ARCHITECTURES="arm64" -S . -B build
+            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_BUILD_TYPE=Release -S . -B build
           else
             VER=${{ env.RELEASE_VERSION }}
-            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_OSX_ARCHITECTURES="arm64" -S . -B build
+            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_OSX_ARCHITECTURES="arm64" -DCMAKE_BUILD_TYPE=Release -S . -B build
           fi
 
       - name: Build
@@ -344,7 +344,7 @@ jobs:
 
       - name: Upload artifact (dmg)
         if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.dmg
@@ -355,7 +355,7 @@ jobs:
           tar -cvf ${{ env.ARCHIVE_NAME }}.tar ${{ env.TARGET_NAME }}.app
 
       - name: Upload artifact (tar)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         with:
           name: ${{ env.ARCHIVE_NAME }}
@@ -366,10 +366,10 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-linux-x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
         with:
           version: ${{ env.QT_VERSION }}
           host: 'linux'
@@ -386,10 +386,10 @@ jobs:
         run: |
           mkdir build
           if ${{ env.NIGHTLY_BUILD }} ; then
-            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -S . -B build
+            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_BUILD_TYPE=Release -S . -B build
           else
             VER=${{ env.RELEASE_VERSION }}
-            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -S . -B build
+            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_BUILD_TYPE=Release -S . -B build
           fi
 
       - name: Build
@@ -402,7 +402,7 @@ jobs:
           mv *.AppImage ${{ env.ARCHIVE_NAME }}.AppImage
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.AppImage
@@ -412,7 +412,7 @@ jobs:
     env:
       ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}-linux-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         
       - name: Setup dependencies
         run: |
@@ -420,7 +420,7 @@ jobs:
           sudo apt-get install -y libevent-2.1-7t64 libminizip1t64
 
       - name: Install Qt
-        uses: jdpurcell/install-qt-action@v5
+        uses: jdpurcell/install-qt-action@d715fb7cdd4e5661191a794764231398e2c952f2 # v5
         with:
           version: ${{ env.QT_VERSION }}
           host: 'linux_arm64'
@@ -437,10 +437,10 @@ jobs:
         run: |
           mkdir build
           if ${{ env.NIGHTLY_BUILD }} ; then
-            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -S . -B build
+            cmake -DNIGHTLY_BUILD=ON -DQT_DEBUG_FIND_PACKAGE=ON -DGIT_HASH=$(git rev-parse --short=7 HEAD) -DCMAKE_BUILD_TYPE=Release -S . -B build
           else
             VER=${{ env.RELEASE_VERSION }}
-            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -S . -B build
+            cmake -DNIGHTLY_BUILD=OFF -DREL_VER=${VER#v} -DCMAKE_BUILD_TYPE=Release -S . -B build
           fi
 
       - name: Build
@@ -453,7 +453,7 @@ jobs:
           mv *.AppImage ${{ env.ARCHIVE_NAME }}.AppImage
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
           path: ${{ env.ARCHIVE_NAME }}.AppImage
@@ -473,10 +473,10 @@ jobs:
       ARCHIVE_PREFIX: ${{ github.event.repository.name }}-${{ github.event.release.tag_name || 'nightly' }}
       AUR_PACKAGE_NAME: ez4connect
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: ${{ env.ARCHIVE_PREFIX }}-*
           merge-multiple: true

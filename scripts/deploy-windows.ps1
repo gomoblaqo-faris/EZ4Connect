@@ -11,6 +11,9 @@ param(
 
 Import-Module -Name Microsoft.PowerShell.Utility
 
+# Stop at the first failing step instead of packaging whatever is left.
+$ErrorActionPreference = "Stop"
+
 # Create output directory
 New-Item -ItemType Directory -Path "$DisplayName" -Force
 Push-Location "$DisplayName"
@@ -22,10 +25,31 @@ Copy-Item -Path "../$BuildDir/Release/$TargetName.exe" -Destination .
 & windeployqt.exe "$TargetName.exe"
 
 # Download and extract zju-connect
-$ZjuReleasePath = if ($Nightly -eq "true") { "download/nightly" } else { "latest/download" }
-$ZjuUrl = "https://github.com/Mythologyli/zju-connect/releases/$ZjuReleasePath/zju-connect-windows-$Architecture.zip"
 $ZjuZipPath = "zju-connect-windows-$Architecture.zip"
-Invoke-WebRequest -Uri $ZjuUrl -OutFile $ZjuZipPath
+$ZjuReleases = "https://github.com/Mythologyli/zju-connect/releases"
+if ($Nightly -eq "true") {
+    # A nightly build is replaced under the same name, so it cannot be pinned.
+    Write-Warning "Bundling an unverified nightly zju-connect"
+    Invoke-WebRequest -Uri "$ZjuReleases/download/nightly/$ZjuZipPath" -OutFile $ZjuZipPath
+} else {
+    $PinnedRelease = Join-Path $PSScriptRoot "zju-connect-release.txt"
+    $ZjuVersion = $null
+    $ZjuSha256 = $null
+    foreach ($Line in Get-Content $PinnedRelease) {
+        $Fields = $Line.Trim() -split '\s+'
+        if ($Fields.Count -ne 2) { continue }
+        if ($Fields[0] -eq "version") { $ZjuVersion = $Fields[1] }
+        if ($Fields[0] -eq $ZjuZipPath) { $ZjuSha256 = $Fields[1] }
+    }
+    if (-not $ZjuVersion -or -not $ZjuSha256) {
+        throw "No pinned version or checksum for $ZjuZipPath in $PinnedRelease"
+    }
+    Invoke-WebRequest -Uri "$ZjuReleases/download/$ZjuVersion/$ZjuZipPath" -OutFile $ZjuZipPath
+    $ActualSha256 = (Get-FileHash -Path $ZjuZipPath -Algorithm SHA256).Hash
+    if ($ActualSha256 -ne $ZjuSha256) {
+        throw "Checksum mismatch for ${ZjuZipPath}: expected $ZjuSha256, got $ActualSha256"
+    }
+}
 Expand-Archive -Path $ZjuZipPath -DestinationPath . -Force
 Remove-Item -Path $ZjuZipPath
 

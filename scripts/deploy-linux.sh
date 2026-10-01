@@ -49,15 +49,27 @@ if [ "$ARCH" = "x86_64" ]; then
     ZJU_ARCH="amd64"
 fi
 
-ZJU_RELEASE_PATH="latest/download"
-if [ "$NIGHTLY" = "true" ]; then
-    ZJU_RELEASE_PATH="download/nightly"
-fi
+ZJU_ASSET="zju-connect-linux-$ZJU_ARCH.zip"
+ZJU_RELEASES="https://github.com/Mythologyli/zju-connect/releases"
+PINNED_RELEASE="$(cd "$(dirname "$0")" && pwd)/zju-connect-release.txt"
 
-wget -O "zju-connect-linux-$ZJU_ARCH.zip" "https://github.com/Mythologyli/zju-connect/releases/$ZJU_RELEASE_PATH/zju-connect-linux-$ZJU_ARCH.zip"
-unzip -o "zju-connect-linux-$ZJU_ARCH.zip"
+if [ "$NIGHTLY" = "true" ]; then
+    # A nightly build is replaced under the same name, so it cannot be pinned.
+    echo "warning: bundling an unverified nightly zju-connect" >&2
+    wget -O "$ZJU_ASSET" "$ZJU_RELEASES/download/nightly/$ZJU_ASSET"
+else
+    ZJU_VERSION="$(awk '$1 == "version" {print $2}' "$PINNED_RELEASE")"
+    ZJU_SHA256="$(awk -v asset="$ZJU_ASSET" '$1 == asset {print $2}' "$PINNED_RELEASE")"
+    if [ -z "$ZJU_VERSION" ] || [ -z "$ZJU_SHA256" ]; then
+        echo "error: no pinned version or checksum for $ZJU_ASSET in $PINNED_RELEASE" >&2
+        exit 1
+    fi
+    wget -O "$ZJU_ASSET" "$ZJU_RELEASES/download/$ZJU_VERSION/$ZJU_ASSET"
+    echo "$ZJU_SHA256  $ZJU_ASSET" | sha256sum -c -
+fi
+unzip -o "$ZJU_ASSET"
 cp zju-connect AppDir/usr/bin/
-rm "zju-connect-linux-$ZJU_ARCH.zip"
+rm "$ZJU_ASSET"
 
 # Copy icon
 cp resource/icon.png "AppDir/usr/share/icons/hicolor/scalable/apps/$TARGET_NAME.png"
