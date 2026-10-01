@@ -112,6 +112,39 @@ QStringList redactSecrets(const QStringList &arguments)
     return redacted;
 }
 
+// Options that name a file the app chooses itself. Taken from the extra
+// arguments, they would let a profile that came from someone else point the
+// core, which runs as root in TUN mode, at a file of their choosing.
+QStringList withoutManagedFileOptions(const QStringList &extraArguments, QStringList *rejected)
+{
+    static const QStringList managedFileOptions{
+        "graph-code-file",
+        "client-data-file",
+        "debug-pcap-file",
+        "debug-tls-log-file"
+    };
+
+    QStringList kept;
+    for (qsizetype index = 0; index < extraArguments.size(); ++index)
+    {
+        const QString &argument = extraArguments.at(index);
+        const QString name = optionName(argument);
+        if (!managedFileOptions.contains(name))
+        {
+            kept << argument;
+            continue;
+        }
+
+        rejected->append(name);
+        // Written as "-name value", the value is a separate argument.
+        if (!argument.contains('=') && index + 1 < extraArguments.size())
+        {
+            ++index;
+        }
+    }
+    return kept;
+}
+
 void appendOption(QStringList &arguments, const QString &name, const QString &value)
 {
     if (!value.isEmpty())
@@ -300,7 +333,10 @@ CoreCommand CoreCommandBuilder::build(const ConnectionProfile &profile, const Co
     appendOption(arguments, "-udp-port-forwarding", profile.tunnel.udpPortForwarding);
     appendOption(arguments, "-custom-dns", profile.dns.custom);
     // An empty argument would make the core stop parsing every flag after it.
-    arguments.append(QProcess::splitCommand(profile.extraArguments));
+    arguments.append(withoutManagedFileOptions(
+        QProcess::splitCommand(profile.extraArguments),
+        &command.rejectedExtraOptions
+    ));
 
     // Extra arguments and proxy URLs can carry secrets of their own.
     command.loggableArguments = redactSecrets(arguments);

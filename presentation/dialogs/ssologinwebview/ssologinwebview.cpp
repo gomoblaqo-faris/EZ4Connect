@@ -7,6 +7,7 @@
 #include <QWebEngineHistory>
 #include <QWebEngineView>
 #include <QWebEnginePage>
+#include <QWebEngineProfile>
 #include <QtWebEngineCore>
 #include <QUrl>
 
@@ -15,6 +16,14 @@ SsoLoginWebView::SsoLoginWebView(QWidget *parent)
     , ui(new Ui::SsoLoginWebView)
 {
     ui->setupUi(this);
+
+    // A profile of its own, kept in memory only, so that a login for one
+    // account or VPN profile cannot be continued with the cookies of another.
+    // The page has to be destroyed before its profile. It belongs to the
+    // view, which is an older child of this dialog than the profile and is
+    // therefore deleted first.
+    auto *webProfile = new QWebEngineProfile(this);
+    ui->webEngineView->setPage(new QWebEnginePage(webProfile, ui->webEngineView));
 
     setAttribute(Qt::WA_DeleteOnClose);
     setModal(true);

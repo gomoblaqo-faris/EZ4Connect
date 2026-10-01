@@ -45,6 +45,7 @@ private:
     QString loadedPassword;
     QString loadedTotpSecret;
     QString loadedCertPassword;
+    QString loadedShadowsocksUrl;
 };
 
 #endif //SETTINGWINDOW_H

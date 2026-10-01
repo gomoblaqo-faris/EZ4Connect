@@ -360,6 +360,100 @@ bool reportsSecretsThatCouldNotBeRemoved()
     return true;
 }
 
+bool aFailedRemovalIsRememberedAndRetried()
+{
+    QTemporaryDir directory;
+    ScopedSecretStore scoped;
+    ProfileSettings::setPendingRemovalsFile(directory.filePath("state.ini"));
+    QSettings settings(directory.filePath("stuck.ini"), QSettings::IniFormat);
+    ProfileSettings::write(settings, ProfileSettings::Password, "hunter2");
+    const QString secretId = ProfileSettings::read(settings, ProfileSettings::SecretId);
+
+    // The profile is deleted while the credential store is unavailable.
+    scoped.store.removesSucceed = false;
+    ProfileSettings::forgetSecrets(settings);
+    ProfileSettings::retryPendingSecretRemovals();
+    QSettings state(directory.filePath("state.ini"), QSettings::IniFormat);
+    if (!state.value("Secrets/PendingRemoval").toStringList()
+             .contains(secretId + "/Credential/Password")
+        || scoped.store.entries.size() != 1)
+    {
+        qCritical() << "a removal that failed was not kept for a later attempt";
+        ProfileSettings::setPendingRemovalsFile(QString());
+        return false;
+    }
+
+    scoped.store.removesSucceed = true;
+    ProfileSettings::retryPendingSecretRemovals();
+    state.sync();
+    const bool passed = scoped.store.entries.isEmpty()
+        && !state.contains("Secrets/PendingRemoval");
+    ProfileSettings::setPendingRemovalsFile(QString());
+    if (!passed)
+    {
+        qCritical() << "a remembered removal was not completed on the next attempt";
+    }
+    return passed;
+}
+
+bool aSecretSavedAgainIsNotRemovedByAnOlderRequest()
+{
+    QTemporaryDir directory;
+    ScopedSecretStore scoped;
+    ProfileSettings::setPendingRemovalsFile(directory.filePath("state.ini"));
+    QSettings settings(directory.filePath("profile.ini"), QSettings::IniFormat);
+    ProfileSettings::write(settings, ProfileSettings::Password, "first");
+    ProfileSettings::write(settings, ProfileSettings::TOTPSecret, "JBSWY3DP");
+
+    // The password is cleared while the credential store is unavailable...
+    scoped.store.removesSucceed = false;
+    ProfileSettings::write(settings, ProfileSettings::Password, QString());
+    QSettings state(directory.filePath("state.ini"), QSettings::IniFormat);
+    const bool remembered = state.value("Secrets/PendingRemoval").toStringList().size() == 1;
+
+    // ...and a new one is saved before the removal could be retried.
+    scoped.store.removesSucceed = true;
+    ProfileSettings::write(settings, ProfileSettings::Password, "second");
+    ProfileSettings::retryPendingSecretRemovals();
+
+    const bool passed = remembered
+        && ProfileSettings::read(settings, ProfileSettings::Password) == "second"
+        // The profile's other secret was never part of the request.
+        && ProfileSettings::read(settings, ProfileSettings::TOTPSecret) == "JBSWY3DP";
+    ProfileSettings::setPendingRemovalsFile(QString());
+    if (!passed)
+    {
+        qCritical() << "aSecretSavedAgainIsNotRemovedByAnOlderRequest failed";
+    }
+    return passed;
+}
+
+bool anExportedCopyDropsCredentialsInFreeFormSettings()
+{
+    QTemporaryDir directory;
+    QSettings harmless(directory.filePath("harmless.ini"), QSettings::IniFormat);
+    ProfileSettings::write(harmless, ProfileSettings::ExtraArguments, "-foo bar");
+    ProfileSettings::write(harmless, ProfileSettings::LoginURL, "/passport/v1/public/casLogin?sfDomain=hitcas");
+    ProfileSettings::stripSecrets(harmless);
+
+    QSettings risky(directory.filePath("risky.ini"), QSettings::IniFormat);
+    ProfileSettings::write(risky, ProfileSettings::ExtraArguments, "-foo bar -password hunter2");
+    ProfileSettings::write(risky, ProfileSettings::LoginURL, "https://sso.example.edu/login?ticket=ST-12345");
+    ProfileSettings::stripSecrets(risky);
+
+    const bool passed =
+        ProfileSettings::read(harmless, ProfileSettings::ExtraArguments) == "-foo bar"
+        && ProfileSettings::read(harmless, ProfileSettings::LoginURL)
+            == "/passport/v1/public/casLogin?sfDomain=hitcas"
+        && ProfileSettings::read(risky, ProfileSettings::ExtraArguments).isEmpty()
+        && ProfileSettings::read(risky, ProfileSettings::LoginURL) == "https://sso.example.edu/login";
+    if (!passed)
+    {
+        qCritical() << "anExportedCopyDropsCredentialsInFreeFormSettings failed";
+    }
+    return passed;
+}
+
 bool anExportedCopyCarriesNoSecretsOrStoreIdentifier()
 {
     QTemporaryDir directory;
@@ -370,6 +464,8 @@ bool anExportedCopyCarriesNoSecretsOrStoreIdentifier()
     // A secret the store refused stays in the file and must not be exported.
     scoped.store.writesSucceed = false;
     ProfileSettings::write(settings, ProfileSettings::TOTPSecret, "JBSWY3DP");
+    ProfileSettings::write(settings, ProfileSettings::ShadowsocksURL, "ss://aes:hunter3@example.org:8388");
+    ProfileSettings::write(settings, ProfileSettings::DialDirectProxy, "socks://bob:hunter4@10.0.0.9:1080");
     settings.sync();
 
     QFile::copy(directory.filePath("profile.ini"), directory.filePath("exported.ini"));
@@ -381,6 +477,8 @@ bool anExportedCopyCarriesNoSecretsOrStoreIdentifier()
     const QByteArray content = file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("unreadable");
     const bool passed = content.contains("alice")
         && !content.contains("JBSWY3DP")
+        && !content.contains("hunter3")
+        && !content.contains("hunter4")
         && !content.contains("SecretId")
         && !content.contains("Password")
         && ProfileSettings::read(settings, ProfileSettings::Password) == "hunter2"
@@ -435,6 +533,9 @@ int main(int argc, char *argv[])
         && resettingAProfileForgetsItsSecrets()
         && anUnreadableSecretIsNotErasedBySavingAForm()
         && reportsSecretsThatCouldNotBeRemoved()
+        && aFailedRemovalIsRememberedAndRetried()
+        && aSecretSavedAgainIsNotRemovedByAnOlderRequest()
+        && anExportedCopyDropsCredentialsInFreeFormSettings()
         && anExportedCopyCarriesNoSecretsOrStoreIdentifier()
         && infersEasyConnectAuthenticationForOlderProfiles() ? 0 : 1;
 }

@@ -343,7 +343,9 @@ void AuthDialogCoordinator::requestSsoLogin()
         ssoUrl = serverUrl.resolved(QUrl(ssoUrl)).toString();
     }
 
-    qInfo().noquote() << QStringLiteral("Single sign-on: ") + ssoUrl;
+    // The query can carry tokens, so only where the login goes is logged.
+    qInfo().noquote() << QStringLiteral("Single sign-on: ")
+        + QUrl(ssoUrl).toString(QUrl::RemoveQuery | QUrl::RemoveFragment | QUrl::RemoveUserInfo);
     ssoLoginWebView = new SsoLoginWebView(parentWidget);
     ssoLoginWebView->setAttribute(Qt::WA_DeleteOnClose);
     ssoLoginWebView->setCallbackServerUrl(serverUrl);

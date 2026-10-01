@@ -1,6 +1,5 @@
 #include "autostart.h"
 
-#include <QApplication>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
@@ -40,6 +39,52 @@ QString macApplicationBundleName()
 }
 }
 
+QString AutoStart::windowsRunCommand(const QString &executablePath)
+{
+    // Unquoted, a path with a space is split at the space, and Windows then
+    // tries "C:\Program.exe" before the intended program.
+    return "\"" + executablePath + "\"";
+}
+
+QString AutoStart::desktopEntryExec(const QString &executablePath)
+{
+    // Desktop Entry Specification, "The Exec key": inside a quoted argument
+    // the characters " ` $ and \ are escaped with a backslash, and because
+    // the value is also a desktop-file string, each of those backslashes is
+    // written twice. "%" introduces a field code and is doubled.
+    QString escaped;
+    escaped.reserve(executablePath.size() + 2);
+    for (const QChar character : executablePath)
+    {
+        if (character == '\\')
+        {
+            escaped += "\\\\\\\\";
+        }
+        else if (character == '"' || character == '`' || character == '$')
+        {
+            escaped += "\\\\";
+            escaped += character;
+        }
+        else if (character == '%')
+        {
+            escaped += "%%";
+        }
+        else
+        {
+            escaped += character;
+        }
+    }
+    return "\"" + escaped + "\"";
+}
+
+QString AutoStart::appleScriptString(const QString &text)
+{
+    QString escaped = text;
+    escaped.replace('\\', "\\\\");
+    escaped.replace('"', "\\\"");
+    return "\"" + escaped + "\"";
+}
+
 OperationStatus AutoStart::setEnabled(bool enabled)
 {
 #if defined(Q_OS_WINDOWS)
@@ -49,11 +94,14 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     );
     if (enabled)
     {
-        settings.setValue(QApplication::applicationName(), nativeApplicationPath());
+        settings.setValue(
+            QCoreApplication::applicationName(),
+            windowsRunCommand(nativeApplicationPath())
+        );
     }
     else
     {
-        settings.remove(QApplication::applicationName());
+        settings.remove(QCoreApplication::applicationName());
     }
     settings.sync();
     if (settings.status() != QSettings::NoError)
@@ -67,9 +115,9 @@ OperationStatus AutoStart::setEnabled(bool enabled)
             "-e",
             // Deleting an item that is already gone is an error in
             // AppleScript, but it is the state the user asked for.
-            "tell application \"System Events\" to if (exists login item \"" +
-                macApplicationBundleName() + "\") then delete login item \"" +
-                macApplicationBundleName() + "\""
+            "tell application \"System Events\" to if (exists login item " +
+                appleScriptString(macApplicationBundleName()) + ") then delete login item " +
+                appleScriptString(macApplicationBundleName())
         };
         QProcess process;
         process.start("osascript", arguments);
@@ -92,7 +140,7 @@ OperationStatus AutoStart::setEnabled(bool enabled)
         const QStringList arguments{
             "-e",
             "tell application \"System Events\" to make login item at end with properties "
-            "{path:\"" + macApplicationBundlePath() + "\", hidden:false}"
+            "{path:" + appleScriptString(macApplicationBundlePath()) + ", hidden:false}"
         };
         QProcess process;
         process.start("osascript", arguments);
@@ -115,7 +163,7 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     const QString directoryPath =
         QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/autostart/";
     QDir directory(directoryPath);
-    QFile desktopFile(directoryPath + QApplication::applicationName() + ".desktop");
+    QFile desktopFile(directoryPath + QCoreApplication::applicationName() + ".desktop");
 
     if (directory.exists() && desktopFile.exists() && !desktopFile.remove())
     {
@@ -143,8 +191,8 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     QTextStream output(&desktopFile);
     output << "[Desktop Entry]\n";
     output << "Type=Application\n";
-    output << "Name=" << QApplication::applicationName() << "\n";
-    output << "Exec=" << nativeApplicationPath() << "\n";
+    output << "Name=" << QCoreApplication::applicationName() << "\n";
+    output << "Exec=" << desktopEntryExec(nativeApplicationPath()) << "\n";
     output << "X-GNOME-Autostart-enabled=true\n";
     output.flush();
     if (output.status() != QTextStream::Ok || !desktopFile.flush())

@@ -13,6 +13,16 @@
 
 const QString macOSNetworkSetupPath = "/usr/sbin/networksetup";
 
+#if defined(Q_OS_WINDOWS)
+// Applications that are already running keep using the old settings until
+// they are told that the settings changed.
+void windowsNotifyProxySettingsChanged()
+{
+    InternetSetOption(nullptr, INTERNET_OPTION_SETTINGS_CHANGED, nullptr, 0);
+    InternetSetOption(nullptr, INTERNET_OPTION_REFRESH, nullptr, 0);
+}
+#endif
+
 OperationStatus windowsSetProxyForAllConnections(const QString &proxyServer, const QString &bypass)
 {
 #if defined(Q_OS_WINDOWS)
@@ -81,6 +91,7 @@ OperationStatus windowsSetProxyForAllConnections(const QString &proxyServer, con
         HeapFree(GetProcessHeap(), 0, lpRasEntryName);
     }
 
+    windowsNotifyProxySettingsChanged();
     free(proxyServerWStr);
     free(bypassWStr);
     return status;
@@ -144,6 +155,7 @@ OperationStatus windowsClearProxyForAllConnections()
 
         HeapFree(GetProcessHeap(), 0, lpRasEntryName);
     }
+    windowsNotifyProxySettingsChanged();
     return status;
 #else
     return {};
@@ -485,7 +497,6 @@ OperationStatus linuxClearSystemProxy()
 
 bool linuxIsSystemProxySet(int http_port, int socks_port)
 {
-    Q_UNUSED(socks_port)
     if (linuxSessionIsKDE())
     {
         QString KDEver = qEnvironmentVariable("KDE_SESSION_VERSION");
@@ -529,7 +540,21 @@ bool linuxIsSystemProxySet(int http_port, int socks_port)
         portProcess.waitForFinished();
         if (hostProcess.readAllStandardOutput().trimmed().contains("127.0.0.1") &&
             portProcess.readAllStandardOutput().trimmed() == QString::number(http_port))
-            return false;
+        {
+            // The HTTP proxy is this app's own, but the SOCKS proxy may
+            // still be somebody else's and would be overwritten too.
+            QProcess socksHostProcess;
+            socksHostProcess.start("gsettings", {"get", "org.gnome.system.proxy.socks", "host"});
+            socksHostProcess.waitForFinished();
+            QProcess socksPortProcess;
+            socksPortProcess.start("gsettings", {"get", "org.gnome.system.proxy.socks", "port"});
+            socksPortProcess.waitForFinished();
+            const QByteArray socksHost = socksHostProcess.readAllStandardOutput().trimmed();
+            const bool socksUnset = socksHost.isEmpty() || socksHost == "''";
+            const bool socksIsOurs = socksHost.contains("127.0.0.1")
+                && socksPortProcess.readAllStandardOutput().trimmed() == QString::number(socks_port);
+            return !(socksUnset || socksIsOurs);
+        }
     }
     return true;
 }

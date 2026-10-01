@@ -38,8 +38,13 @@ public:
 
     void setSilentStartEnabled(bool enabled) const;
 
+    // The file that holds state shared by all profiles.
+    QString stateFilePath() const;
+
 private:
     QString configRootPath;
+    // False when the root is a location shared with other applications.
+    bool ownsConfigRoot = true;
     QString profilesPath;
     QString statePath;
     QString defaultProfilePath;

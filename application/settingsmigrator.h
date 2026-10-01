@@ -7,7 +7,10 @@ enum class SettingsMigrationAction
 {
     None,
     MigrateAutoStart,
-    RecommendReset
+    RecommendReset,
+    // Written by a newer version of the app. It is used as it is, and its
+    // version is left alone so that the newer version still recognises it.
+    NewerThanApplication
 };
 
 class SettingsMigrator

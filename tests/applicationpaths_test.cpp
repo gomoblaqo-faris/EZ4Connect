@@ -101,6 +101,27 @@ bool removesClientDataOfADeletedProfile()
     return true;
 }
 
+bool keepsDataPrivateToItsOwner()
+{
+#ifdef Q_OS_UNIX
+    const QFileDevice::Permissions others =
+        QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup
+        | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
+    const QString clientData = ApplicationPaths::clientDataFile("private");
+    const QString dataRoot =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    ApplicationPaths::logDirectory();
+
+    if ((QFileInfo(dataRoot).permissions() & others)
+        || (QFileInfo(clientData).permissions() & others))
+    {
+        qCritical() << "login data is readable by other users";
+        return false;
+    }
+#endif
+    return true;
+}
+
 bool refusesTheDefaultProfileAndUnsafeNames()
 {
     if (!writeClientData("", "default-session")
@@ -142,6 +163,7 @@ int main(int argc, char *argv[])
         && renameReplacesDataLeftUnderTheNewName()
         && renameWithoutClientDataStillClearsTheNewName()
         && removesClientDataOfADeletedProfile()
+        && keepsDataPrivateToItsOwner()
         && refusesTheDefaultProfileAndUnsafeNames();
 
     QDir(dataRoot).removeRecursively();

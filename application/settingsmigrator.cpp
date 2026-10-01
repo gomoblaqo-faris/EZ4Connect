@@ -27,6 +27,10 @@ SettingsMigrationAction SettingsMigrator::prepare(QSettings &settings)
     {
         return SettingsMigrationAction::RecommendReset;
     }
+    if (configVersion > ApplicationConstants::ConfigVersion)
+    {
+        return SettingsMigrationAction::NewerThanApplication;
+    }
     return SettingsMigrationAction::None;
 }
 
@@ -38,10 +42,16 @@ void SettingsMigrator::finish(QSettings &settings, bool resetToDefaults)
         settings.clear();
         DefaultSettings::reset(settings);
     }
-    ProfileSettings::write(
-        settings,
-        ProfileSettings::ConfigVersion,
-        ApplicationConstants::ConfigVersion
-    );
+    // Never lower the version: a newer version of the app would then take
+    // its own profile for an old one and migrate it again.
+    if (ProfileSettings::read(settings, ProfileSettings::ConfigVersion)
+        < ApplicationConstants::ConfigVersion)
+    {
+        ProfileSettings::write(
+            settings,
+            ProfileSettings::ConfigVersion,
+            ApplicationConstants::ConfigVersion
+        );
+    }
     settings.sync();
 }

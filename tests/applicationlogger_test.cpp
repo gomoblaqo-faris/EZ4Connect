@@ -29,10 +29,13 @@ bool publishesQtAndCoreEntries()
 
         logger.appendCoreOutput("standard output\ncontinued standard output");
         logger.appendCoreOutput("error output");
+        logger.appendCoreOutput(
+            "callback https://vpn.example.edu/cb?ticket=ST-12345&state=ok TWFID=abcdef"
+        );
     }
 
     const QString timestampPattern = R"(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})";
-    const bool entriesArePublished = entries.size() == 4
+    const bool entriesArePublished = entries.size() == 5
         && QRegularExpression(
                "^\\[INFO\\] " + timestampPattern + " application event$"
            ).match(entries.at(0)).hasMatch()
@@ -40,7 +43,9 @@ bool publishesQtAndCoreEntries()
                "^\\[WARNING\\] " + timestampPattern + " background warning$"
            ).match(entries.at(1)).hasMatch()
         && entries.at(2) == "[CORE] standard output\n[CORE] continued standard output"
-        && entries.at(3) == "[CORE] error output";
+        && entries.at(3) == "[CORE] error output"
+        && entries.at(4)
+            == "[CORE] callback https://vpn.example.edu/cb?ticket=<redacted>&state=ok TWFID=<redacted>";
 
     if (!entriesArePublished)
     {

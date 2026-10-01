@@ -9,6 +9,7 @@
 #include "ui_settingwindow.h"
 #include "application/applicationconstants.h"
 #include "application/defaultsettings.h"
+#include "application/profileimport.h"
 #include "application/profilesettings.h"
 #include "infrastructure/platform/autostart.h"
 #include "infrastructure/storage/applicationpaths.h"
@@ -116,23 +117,23 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                     return;
                 }
                 QSettings newSettings(filename, QSettings::IniFormat);
-                for (const auto& key : newSettings.allKeys()) {
-                    // The identifier names another profile's saved secrets.
-                    if (key == ProfileSettings::SecretId.name)
-                        continue;
-                    settings->setValue(key, newSettings.value(key));
-                }
-                // A file without a secret means "none saved". Keeping this
-                // profile's old one would send it to the imported server.
-                for (const ProfileSettings::SecretKey *secret : {&ProfileSettings::Password,
-                                                                 &ProfileSettings::TOTPSecret,
-                                                                 &ProfileSettings::CertPassword})
+                const QString importedArguments = ProfileImport::extraArguments(newSettings);
+                bool includeExtraArguments = false;
+                if (!importedArguments.isEmpty())
                 {
-                    if (!newSettings.contains(secret->name))
-                        ProfileSettings::write(*settings, *secret, QString());
+                    includeExtraArguments = QMessageBox::warning(
+                        this,
+                        "Extra Core Arguments",
+                        "This file sets extra arguments for the VPN core:\n\n"
+                            + importedArguments
+                            + "\n\nThey are passed to the core as they are, and in TUN mode the core "
+                              "runs with administrator privileges. Only import them if you trust "
+                              "where the file came from.\n\nImport these arguments?",
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No
+                    ) == QMessageBox::Yes;
                 }
-                ProfileSettings::migrateSecrets(*settings);
-                settings->sync();
+                ProfileImport::apply(*settings, newSettings, includeExtraArguments);
                 loadSettings();
             });
 
@@ -151,19 +152,19 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 if (QFile::exists(filename))
                     QFile::remove(filename);
                 QFile::copy(settings->fileName(), filename);
-                if (ProfileSettings::usesSecretStore())
                 {
-                    // The identifier would let whoever uses the exported file
-                    // read and overwrite this profile's saved passwords, and
-                    // a password the store refused is still in the file.
+                    // An exported file is meant to be passed around, so it
+                    // never carries the passwords, wherever they are kept.
+                    // The identifier would let whoever uses the file read
+                    // and overwrite this profile's saved passwords.
                     QSettings exported(filename, QSettings::IniFormat);
                     ProfileSettings::stripSecrets(exported);
                     exported.sync();
                     QMessageBox::information(
                         this,
                         "Passwords Not Exported",
-                        "Saved passwords are kept in the system credential store and are not "
-                        "part of the exported file. Enter them again after importing it."
+                        "Saved passwords and other secrets are not part of the exported file. "
+                        "Enter them again after importing it."
                     );
                 }
             });
@@ -285,7 +286,8 @@ void SettingWindow::loadSettings()
     ui->dnsTTLSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::DNSTTL));
     ui->socks5PortSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::SOCKS5Port));
     ui->httpPortSpinBox->setValue(ProfileSettings::read(*settings, ProfileSettings::HTTPPort));
-    ui->shadowsocksUrlLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::ShadowsocksURL));
+    loadedShadowsocksUrl = ProfileSettings::read(*settings, ProfileSettings::ShadowsocksURL);
+    ui->shadowsocksUrlLineEdit->setText(loadedShadowsocksUrl);
     ui->dialDirectProxyLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::DialDirectProxy));
     ui->updateBestNodesIntervalSpinBox->setValue(
         ProfileSettings::read(*settings, ProfileSettings::UpdateBestNodesInterval));
@@ -411,7 +413,13 @@ void SettingWindow::applySettings()
     ProfileSettings::write(*settings, ProfileSettings::DNSTTL, ui->dnsTTLSpinBox->value());
     ProfileSettings::write(*settings, ProfileSettings::SOCKS5Port, ui->socks5PortSpinBox->value());
     ProfileSettings::write(*settings, ProfileSettings::HTTPPort, ui->httpPortSpinBox->value());
-    ProfileSettings::write(*settings, ProfileSettings::ShadowsocksURL, ui->shadowsocksUrlLineEdit->text());
+    ProfileSettings::writeIfChanged(
+        *settings,
+        ProfileSettings::ShadowsocksURL,
+        loadedShadowsocksUrl,
+        ui->shadowsocksUrlLineEdit->text()
+    );
+    loadedShadowsocksUrl = ui->shadowsocksUrlLineEdit->text();
     ProfileSettings::write(*settings, ProfileSettings::DialDirectProxy, ui->dialDirectProxyLineEdit->text());
     ProfileSettings::write(*settings, ProfileSettings::UpdateBestNodesInterval, ui->updateBestNodesIntervalSpinBox->value());
 
@@ -463,8 +471,16 @@ void SettingWindow::applySettings()
     ProfileSettings::write(*settings, ProfileSettings::CustomProxyDomain, customProxyDomain);
     ProfileSettings::write(*settings, ProfileSettings::ExtraArguments, extraArguments);
 
-    ProfileSettings::write(*settings, ProfileSettings::ConfigVersion, ApplicationConstants::ConfigVersion
-    );
+    // A profile from a newer version of the app keeps its version.
+    if (ProfileSettings::read(*settings, ProfileSettings::ConfigVersion)
+        < ApplicationConstants::ConfigVersion)
+    {
+        ProfileSettings::write(
+            *settings,
+            ProfileSettings::ConfigVersion,
+            ApplicationConstants::ConfigVersion
+        );
+    }
 
     settings->sync();
 }

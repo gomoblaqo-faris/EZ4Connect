@@ -23,6 +23,9 @@ public:
 
     void writeInput(const QByteArray &data) override;
 
+    // How long a core asked to stop may take before it is killed.
+    void setKillDelayMs(int delayMs);
+
 private:
     QString copyCoreForAppImage(const QString &programPath);
 
@@ -41,6 +44,10 @@ private:
     CoreOutputBuffer standardOutputBuffer;
     CoreOutputBuffer standardErrorBuffer;
     bool stopRequested = false;
+    // Whether this launch went through sudo, the only case in which a sudo
+    // password prompt in the output is genuine.
+    bool launchedThroughSudo = false;
+    QTimer killTimer;
 
 };
 

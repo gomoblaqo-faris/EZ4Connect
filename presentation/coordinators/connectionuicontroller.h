@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "core/connectionerror.h"
+#include "application/systemproxybackend.h"
 #include "core/connectionsessionstate.h"
 
 class QAction;
@@ -78,6 +79,10 @@ private:
     bool proxyWanted = false;
     bool proxyIntentInitialised = false;
     bool proxySyncPending = false;
+    // Taken when the session starts, together with the profile the core is
+    // given, so that the system proxy always points at the ports that core
+    // listens on even if the settings are edited meanwhile.
+    SystemProxyConfig sessionProxyConfig;
 };
 
 #endif // CONNECTIONUICONTROLLER_H

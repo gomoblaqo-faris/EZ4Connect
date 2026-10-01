@@ -31,7 +31,8 @@ ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
         QString errorString = zjuConnectProcess->errorString();
         qWarning().noquote() << "Exit reason: " + errorString;
 
-        if (errorString.contains("No such file or directory") || errorString.contains("not found") || errorString.contains("找不到"))
+        // The error text is localised, so only the error code can be relied on.
+        if (err == QProcess::FailedToStart)
         {
             qWarning().noquote() << "Core path: " + zjuConnectProcess->program();
             emit error(ZJU_ERROR::PROGRAM_NOT_FOUND);
@@ -43,8 +44,22 @@ ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
         processOutput(standardOutputBuffer, zjuConnectProcess->readAllStandardOutput(), true);
         processOutput(standardErrorBuffer, zjuConnectProcess->readAllStandardError(), true);
         stopRequested = false;
+        killTimer.stop();
         qInfo().noquote() << "Exit reason: process finished";
         emit finished();
+    });
+
+    // A core that ignores the request to terminate must not keep the session,
+    // or the application's exit, waiting forever.
+    killTimer.setSingleShot(true);
+    killTimer.setInterval(5000);
+    connect(&killTimer, &QTimer::timeout, this, [this]()
+    {
+        if (zjuConnectProcess->state() != QProcess::NotRunning)
+        {
+            qWarning().noquote() << "The core did not stop when asked; killing it";
+            zjuConnectProcess->kill();
+        }
     });
 }
 
@@ -85,7 +100,13 @@ void ZjuConnectProcess::processOutputLines(const QList<QByteArray> &lines)
         switch (CoreOutputParser::parse(line))
         {
         case CoreOutputEvent::AskSudoPassword:
-            emit askSudoPass();
+            // Only sudo itself may ask for the password. The same text from
+            // a core that was not started through sudo is just output, and
+            // answering it would hand that core the administrator password.
+            if (launchedThroughSudo)
+            {
+                emit askSudoPass();
+            }
             break;
         case CoreOutputEvent::GraphCaptcha:
             emit graphCaptcha(CoreOutputParser::graphCaptchaFile(line));
@@ -226,6 +247,12 @@ void ZjuConnectProcess::start(const ConnectionProfile &profile)
 
     const CoreCommand command = CoreCommandBuilder::build(profile, runtimePaths);
     qInfo().noquote() << "VPN starting. Arguments: " + command.loggableCommandLine();
+    if (!command.rejectedExtraOptions.isEmpty())
+    {
+        qWarning().noquote()
+            << "Ignored extra arguments that the app sets itself: "
+                   + command.rejectedExtraOptions.join(", ");
+    }
 
     if (!profile.credentials.totpSecret.isEmpty())
     {
@@ -250,9 +277,11 @@ void ZjuConnectProcess::start(const ConnectionProfile &profile)
         processEnvironment.insert(iterator.key(), iterator.value());
     }
 
+    launchedThroughSudo = false;
 #if defined(Q_OS_UNIX)
     if (profile.tunnel.tunMode && !Privileges::isElevated())
     {
+        launchedThroughSudo = true;
         programToStart = copyCoreForAppImage(programToStart);
 
         QStringList sudoArgs;
@@ -270,7 +299,7 @@ void ZjuConnectProcess::start(const ConnectionProfile &profile)
 
     zjuConnectProcess->setProcessEnvironment(processEnvironment);
     zjuConnectProcess->start(programToStart, finalArgs);
-    zjuConnectProcess->waitForStarted();
+    zjuConnectProcess->waitForStarted(5000);
     if (zjuConnectProcess->state() == QProcess::NotRunning)
     {
         emit finished();
@@ -292,11 +321,17 @@ void ZjuConnectProcess::stop()
     {
         stopRequested = true;
         zjuConnectProcess->terminate();
+        killTimer.start();
     }
     else
     {
         zjuConnectProcess->kill();
     }
+}
+
+void ZjuConnectProcess::setKillDelayMs(int delayMs)
+{
+    killTimer.setInterval(delayMs);
 }
 
 void ZjuConnectProcess::writeInput(const QByteArray &data)
@@ -317,6 +352,6 @@ ZjuConnectProcess::~ZjuConnectProcess()
     if (!zjuConnectProcess->waitForFinished(3000))
     {
         zjuConnectProcess->kill();
-        zjuConnectProcess->waitForFinished();
+        zjuConnectProcess->waitForFinished(3000);
     }
 }

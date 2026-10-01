@@ -42,6 +42,7 @@ set(SOURCE_FILES
     application/commandlineoptions.cpp
     application/coreprocess.h
     application/connectionsession.cpp
+    application/profileimport.cpp
     application/profileservice.cpp
     application/profilesettings.cpp
     application/settingsmigrator.cpp
@@ -113,8 +114,22 @@ elseif(APPLE)
         ${app_icon_macos}
     )
 
-    set_target_properties(${PROJECT_NAME}
-        PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resource/Info.plist")
+    # Info.plist is a template: CMake fills in the version from these. Apple
+    # only accepts dotted numbers there, so "1.9.1-preview.4" becomes "1.9.1",
+    # and development and nightly builds, which have no release number, get
+    # zeros. The full version is what the app itself shows.
+    set(BUNDLE_VERSION "0.0.0")
+    if(NOT NIGHTLY_BUILD AND DEFINED REL_VER)
+        string(REGEX MATCH "^[0-9]+(\\.[0-9]+)*" RELEASE_NUMBER "${REL_VER}")
+        if(RELEASE_NUMBER)
+            set(BUNDLE_VERSION "${RELEASE_NUMBER}")
+        endif()
+    endif()
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resource/Info.plist"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${BUNDLE_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${BUNDLE_VERSION}"
+    )
 else()
     add_executable(${PROJECT_NAME}
         ${SOURCE_FILES}
@@ -254,6 +269,25 @@ if(BUILD_TESTING)
     target_link_libraries(profilesettings_test Qt::Core)
     add_test(NAME profilesettings_test COMMAND profilesettings_test)
 
+    add_executable(autostart_test
+        tests/autostart_test.cpp
+        infrastructure/platform/autostart.cpp
+    )
+    target_include_directories(autostart_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(autostart_test Qt::Core)
+    add_test(NAME autostart_test COMMAND autostart_test)
+
+    add_executable(profileimport_test
+        tests/profileimport_test.cpp
+        application/profileimport.cpp
+        application/defaultsettings.cpp
+        application/profilesettings.cpp
+        application/settingsmigrator.cpp
+    )
+    target_include_directories(profileimport_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(profileimport_test Qt::Core)
+    add_test(NAME profileimport_test COMMAND profileimport_test)
+
     add_executable(profileservice_test
         tests/profileservice_test.cpp
         application/profileservice.cpp
@@ -278,12 +312,31 @@ if(BUILD_TESTING)
     target_link_libraries(applicationpaths_test Qt::Core)
     add_test(NAME applicationpaths_test COMMAND applicationpaths_test)
 
+    # The stand-in cores are shell scripts.
+    if(UNIX)
+        add_executable(zjuconnectprocess_test
+            tests/zjuconnectprocess_test.cpp
+            application/coreprocess.h
+            infrastructure/coreprocess/zjuconnectprocess.cpp
+            infrastructure/coreprocess/corecommandbuilder.cpp
+            infrastructure/coreprocess/consoleoutputdecoder.cpp
+            infrastructure/coreprocess/coreoutputbuffer.cpp
+            infrastructure/coreprocess/coreoutputparser.cpp
+            infrastructure/platform/privileges.cpp
+            infrastructure/storage/applicationpaths.cpp
+        )
+        target_include_directories(zjuconnectprocess_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        target_link_libraries(zjuconnectprocess_test Qt::Core Qt::Core5Compat)
+        add_test(NAME zjuconnectprocess_test COMMAND zjuconnectprocess_test)
+    endif()
+
     add_executable(configurationguidedialog_test
         tests/configurationguidedialog_test.cpp
         presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
         presentation/dialogs/authinfowindow/authinfowindow.cpp
         infrastructure/coreprocess/consoleoutputdecoder.cpp
         infrastructure/coreprocess/coreexecutable.cpp
+        application/applicationlogger.cpp
         application/profilesettings.cpp
     )
     target_include_directories(configurationguidedialog_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

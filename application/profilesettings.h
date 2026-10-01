@@ -102,7 +102,8 @@ inline const Key<QString> CustomDNS{"ZJUConnect/CustomDNS", ""};
 inline const Key<int> SOCKS5Port{"ZJUConnect/SOCKS5Port", 11080};
 inline const Key<int> HTTPPort{"ZJUConnect/HTTPPort", 11081};
 inline const Key<bool> OutsideAccess{"ZJUConnect/OutsideAccess", false};
-inline const Key<QString> ShadowsocksURL{"ZJUConnect/ShadowsocksURL", ""};
+// Always carries the proxy's password, so it is kept with the secrets.
+inline const SecretKey ShadowsocksURL{"ZJUConnect/ShadowsocksURL", false};
 inline const Key<QString> DialDirectProxy{"ZJUConnect/DialDirectProxy", ""};
 inline const Key<bool> ProxyAll{"ZJUConnect/ProxyAll", false};
 inline const Key<QString> CustomProxyDomain{"ZJUConnect/CustomProxyDomain", ""};
@@ -162,6 +163,10 @@ bool contains(const QSettings &settings, const Key<T> &key)
 // Without a store, or with nullptr, secrets stay in the profile file. The
 // store is not owned and must outlive every later call.
 void setSecretStore(SecretStore *store);
+// Where identifiers of secrets that could not be removed are kept, so the
+// removal can be tried again. Without it a failed removal is only logged.
+void setPendingRemovalsFile(const QString &path);
+void retryPendingSecretRemovals();
 
 bool usesSecretStore();
 
@@ -183,7 +188,10 @@ void migrateSecrets(QSettings &settings);
 bool forgetSecrets(QSettings &settings);
 bool forgetSecrets(const QString &secretId);
 // Removes everything that must not leave this machine from a copy of a
-// profile file: the secrets and the identifier of their store entries.
+// profile file: the secrets, the identifier of their store entries, a
+// direct-connection proxy address that embeds credentials, extra arguments
+// that look like they set a credential, and the query of a login URL that
+// looks like it carries one.
 void stripSecrets(QSettings &exportedCopy);
 // Gives a profile file that was copied from another profile its own copies
 // of that profile's secrets, so that editing one does not change the other.

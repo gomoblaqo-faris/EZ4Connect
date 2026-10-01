@@ -1,5 +1,6 @@
 #include "applicationpaths.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QDateTime>
 #include <QFile>
@@ -16,11 +17,29 @@ QString safeProfileName(const QString &profileId)
     return name;
 }
 
+// Login data and logs can reveal accounts and session tokens, so the
+// directory that holds them is closed to other users of the machine. That
+// also covers directories created by earlier versions and every file inside.
+QString privateDataRoot()
+{
+    const QString root =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    QDir().mkpath(root);
+    // Without an application name the location is the one every application
+    // shares, which is not this application's to close.
+    if (!QCoreApplication::applicationName().isEmpty())
+    {
+        QFile::setPermissions(
+            root,
+            QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner
+        );
+    }
+    return root;
+}
+
 QString profileDataDirectory(const QString &profileId)
 {
-    return QDir(
-        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-    ).filePath("profiles/" + profileId);
+    return QDir(privateDataRoot()).filePath("profiles/" + profileId);
 }
 
 bool isNamedProfileId(const QString &profileId)
@@ -55,6 +74,7 @@ QString ApplicationPaths::clientDataFile(const QString &profileId)
     {
         clientData.write("{}");
         clientData.close();
+        clientData.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     }
     return clientData.fileName();
 }
@@ -104,10 +124,7 @@ bool ApplicationPaths::moveProfileData(
 
 QString ApplicationPaths::logDirectory()
 {
-    QDir logDirectory(
-        QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation))
-            .filePath("logs")
-    );
+    QDir logDirectory(QDir(privateDataRoot()).filePath("logs"));
     if (!logDirectory.exists())
     {
         logDirectory.mkpath(".");

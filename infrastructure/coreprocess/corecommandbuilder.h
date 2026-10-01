@@ -20,6 +20,8 @@ struct CoreCommand
     QStringList loggableArguments;
     QStringList clearedEnvironmentVariables;
     QMap<QString, QString> environmentVariables;
+    // Extra arguments that were dropped because the app sets them itself.
+    QStringList rejectedExtraOptions;
 
     QString loggableCommandLine() const;
 };

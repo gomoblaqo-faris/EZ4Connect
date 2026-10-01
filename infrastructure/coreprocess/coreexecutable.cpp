@@ -19,12 +19,16 @@ QString CoreExecutable::version(QObject *parent)
 {
     QProcess process(parent);
     process.start(path(), {"-version"});
-    if (!process.waitForStarted())
+    // This runs on the GUI thread, so a core that hangs must not be waited
+    // for as long as the defaults allow.
+    if (!process.waitForStarted(5000))
     {
         throw std::runtime_error("Failed to start the core");
     }
-    if (!process.waitForFinished())
+    if (!process.waitForFinished(10000))
     {
+        process.kill();
+        process.waitForFinished(1000);
         throw std::runtime_error("The core timed out");
     }
 

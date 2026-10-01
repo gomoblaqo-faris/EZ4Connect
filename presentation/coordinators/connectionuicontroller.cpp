@@ -9,6 +9,7 @@
 #include <QSettings>
 #include <QWidget>
 
+#include <algorithm>
 #include <utility>
 
 #include "application/applicationlogger.h"
@@ -357,13 +358,9 @@ void ConnectionUiController::syncSystemProxy()
 
 void ConnectionUiController::enableSystemProxy()
 {
-    const int httpPort = ProfileSettings::read(*settings(), ProfileSettings::HTTPPort);
-    const int socksPort = ProfileSettings::read(*settings(), ProfileSettings::SOCKS5Port);
-    const SystemProxyConfig proxyConfig{
-        httpPort,
-        socksPort,
-        ProfileSettings::read(*settings(), ProfileSettings::SystemProxyBypass)
-    };
+    const SystemProxyConfig proxyConfig = sessionProxyConfig;
+    const int httpPort = proxyConfig.httpPort;
+    const int socksPort = proxyConfig.socksPort;
     connect(
         systemProxySession,
         &SystemProxySession::conflictCheckFinished,
@@ -443,10 +440,24 @@ void ConnectionUiController::startConnection(
         profile.endpoint.phone = phone;
     }
     profile.program = CoreExecutable::path();
+    // The value comes from a file the user may have edited or imported.
+    const int reconnectSeconds = std::clamp(
+        ProfileSettings::read(*settings(), ProfileSettings::ReconnectTime), 1, 3600
+    );
     const ReconnectPolicy reconnectPolicy{
         ProfileSettings::read(*settings(), ProfileSettings::AutoReconnect),
-        ProfileSettings::read(*settings(), ProfileSettings::ReconnectTime) * 1000
+        reconnectSeconds * 1000
     };
+    const SystemProxyConfig proxyConfig{
+        ProfileSettings::read(*settings(), ProfileSettings::HTTPPort),
+        ProfileSettings::read(*settings(), ProfileSettings::SOCKS5Port),
+        ProfileSettings::read(*settings(), ProfileSettings::SystemProxyBypass)
+    };
+    if (connectionSession->isActive())
+    {
+        return;
+    }
+    sessionProxyConfig = proxyConfig;
     if (!connectionSession->start(profile, reconnectPolicy)
         || !connectionSession->isActive())
     {

@@ -39,12 +39,14 @@ void DeviceTrust::set(
 
     QProcess process(parent);
     process.start(CoreExecutable::path(), arguments);
-    if (!process.waitForStarted())
+    if (!process.waitForStarted(5000))
     {
         throw std::runtime_error("Failed to start the core");
     }
-    if (!process.waitForFinished())
+    if (!process.waitForFinished(30000))
     {
+        process.kill();
+        process.waitForFinished(1000);
         throw std::runtime_error("The core timed out");
     }
 

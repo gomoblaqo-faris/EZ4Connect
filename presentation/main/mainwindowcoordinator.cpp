@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include <QDebug>
+
 #include "application/applicationconstants.h"
 #include "application/connectionsession.h"
 #include "application/profileservice.h"
@@ -46,6 +48,16 @@ MainWindowCoordinator::MainWindowCoordinator(
     );
 #endif
     ProfileSettings::setSecretStore(secretStore.get());
+    ProfileSettings::setPendingRemovalsFile(ProfileManager().stateFilePath());
+    if (secretStore == nullptr)
+    {
+        qInfo().noquote()
+            << "This build has no credential store support: saved passwords stay in the profile file";
+    }
+    else
+    {
+        ProfileSettings::retryPendingSecretRemovals();
+    }
 
     connect(
         connectionSession,

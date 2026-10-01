@@ -1,5 +1,6 @@
 #include "profilemanager.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -9,6 +10,13 @@
 
 namespace
 {
+// Profiles can hold credentials, so neither they nor the directories they are
+// in should be readable by other users of the machine.
+const QFileDevice::Permissions ownerOnlyFile =
+    QFileDevice::ReadOwner | QFileDevice::WriteOwner;
+const QFileDevice::Permissions ownerOnlyDirectory =
+    QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner;
+
 bool createEmptyFile(const QString &path)
 {
     const QFileInfo fileInfo(path);
@@ -18,7 +26,12 @@ bool createEmptyFile(const QString &path)
     }
 
     QFile file(path);
-    return file.open(QIODevice::WriteOnly | QIODevice::NewOnly);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::NewOnly))
+    {
+        return false;
+    }
+    file.setPermissions(ownerOnlyFile);
+    return true;
 }
 }
 
@@ -27,6 +40,10 @@ ProfileManager::ProfileManager(const QString &storageRoot)
     configRootPath = storageRoot.isEmpty()
         ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
         : storageRoot;
+    // Without an application name the standard location is the one every
+    // application shares.
+    ownsConfigRoot = !storageRoot.isEmpty()
+        || !QCoreApplication::applicationName().isEmpty();
     profilesPath = QDir(configRootPath).filePath("profiles");
     statePath = QDir(configRootPath).filePath("state.ini");
     defaultProfilePath = QDir(configRootPath).filePath("config.ini");
@@ -106,6 +123,7 @@ QString ProfileManager::createProfile(const QString &requestedName, const QStrin
         {
             return QString();
         }
+        QFile::setPermissions(path, ownerOnlyFile);
     }
     else
     {
@@ -189,6 +207,11 @@ void ProfileManager::setSilentStartEnabled(bool enabled) const
     state.sync();
 }
 
+QString ProfileManager::stateFilePath() const
+{
+    return statePath;
+}
+
 QString ProfileManager::ensureUniqueProfileId(const QString &baseId) const
 {
     QString candidate = baseId;
@@ -223,4 +246,12 @@ void ProfileManager::ensureStorage() const
     {
         profilesDir.mkpath(".");
     }
+
+    // Also tightens directories created by earlier versions. With these
+    // closed, files inside are out of reach whatever their own mode is.
+    if (ownsConfigRoot)
+    {
+        QFile::setPermissions(configRootPath, ownerOnlyDirectory);
+    }
+    QFile::setPermissions(profilesPath, ownerOnlyDirectory);
 }

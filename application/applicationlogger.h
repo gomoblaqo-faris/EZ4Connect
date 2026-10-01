@@ -15,6 +15,10 @@ public:
 
     void appendCoreOutput(const QString &output);
 
+    // Masks ticket, token and password values in text that came from the
+    // core, which echoes URLs and server replies.
+    static QString redactSecrets(const QString &text);
+
 signals:
     void entryAdded(const QString &entry);
 

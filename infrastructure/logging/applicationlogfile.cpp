@@ -19,6 +19,7 @@ ApplicationLogFile::ApplicationLogFile(const QString &filePath, QObject *parent)
 {
     if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
     {
+        file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
         stream.setDevice(&file);
         stream.setEncoding(QStringConverter::Utf8);
         appendEntry(

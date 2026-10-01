@@ -29,7 +29,7 @@ void DefaultSettings::reset(QSettings &settings)
     writeInitial(settings, DNSTTL);
     writeInitial(settings, SOCKS5Port);
     writeInitial(settings, HTTPPort);
-    writeInitial(settings, ShadowsocksURL);
+    write(settings, ShadowsocksURL, QString());
     writeInitial(settings, DialDirectProxy);
     writeInitial(settings, UpdateBestNodesInterval);
     writeInitial(settings, CredentialsAsArguments);

@@ -2,6 +2,8 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QRegularExpression>
+#include <QUrl>
 #include <QUuid>
 
 #include <iterator>
@@ -11,12 +13,71 @@
 namespace
 {
 SecretStore *activeStore = nullptr;
+QString pendingRemovalsFile;
 
 const ProfileSettings::SecretKey *const allSecrets[] = {
     &ProfileSettings::Password,
     &ProfileSettings::CertPassword,
     &ProfileSettings::TOTPSecret,
+    &ProfileSettings::ShadowsocksURL,
 };
+
+const char *const pendingRemovalsKey = "Secrets/PendingRemoval";
+
+// Removals are remembered per store entry, not per profile: retrying a whole
+// profile would also delete its secrets that are still in use.
+void rememberForRetry(const QString &storeAccount)
+{
+    if (pendingRemovalsFile.isEmpty())
+    {
+        return;
+    }
+    QSettings state(pendingRemovalsFile, QSettings::IniFormat);
+    QStringList pending = state.value(pendingRemovalsKey).toStringList();
+    if (!pending.contains(storeAccount))
+    {
+        pending << storeAccount;
+        state.setValue(pendingRemovalsKey, pending);
+        state.sync();
+    }
+}
+
+// An entry that has been written again is in use, so an older request to
+// remove it must not be carried out.
+void noLongerPending(const QString &storeAccount)
+{
+    if (pendingRemovalsFile.isEmpty())
+    {
+        return;
+    }
+    QSettings state(pendingRemovalsFile, QSettings::IniFormat);
+    QStringList pending = state.value(pendingRemovalsKey).toStringList();
+    if (pending.removeAll(storeAccount) == 0)
+    {
+        return;
+    }
+    if (pending.isEmpty())
+    {
+        state.remove(pendingRemovalsKey);
+    }
+    else
+    {
+        state.setValue(pendingRemovalsKey, pending);
+    }
+    state.sync();
+}
+
+bool removeFromStore(const QString &storeAccount, const char *settingName)
+{
+    if (activeStore->remove(storeAccount))
+    {
+        return true;
+    }
+    qWarning().noquote()
+        << "Could not remove" << settingName << "from the system credential store";
+    rememberForRetry(storeAccount);
+    return false;
+}
 
 QString account(const QString &secretId, const ProfileSettings::SecretKey &key)
 {
@@ -40,9 +101,61 @@ void writeToFile(QSettings &settings, const ProfileSettings::SecretKey &key, con
 }
 }
 
+namespace
+{
+bool removeAllFromStore(const QString &secretId)
+{
+    bool allRemoved = true;
+    for (const ProfileSettings::SecretKey *key : allSecrets)
+    {
+        if (!removeFromStore(account(secretId, *key), key->name))
+        {
+            allRemoved = false;
+        }
+    }
+    return allRemoved;
+}
+}
+
 void ProfileSettings::setSecretStore(SecretStore *store)
 {
     activeStore = store;
+}
+
+void ProfileSettings::setPendingRemovalsFile(const QString &path)
+{
+    pendingRemovalsFile = path;
+}
+
+void ProfileSettings::retryPendingSecretRemovals()
+{
+    if (activeStore == nullptr || pendingRemovalsFile.isEmpty())
+    {
+        return;
+    }
+
+    QSettings state(pendingRemovalsFile, QSettings::IniFormat);
+    const QStringList pending = state.value(pendingRemovalsKey).toStringList();
+    QStringList stillPending;
+    for (const QString &storeAccount : pending)
+    {
+        if (!activeStore->remove(storeAccount))
+        {
+            stillPending << storeAccount;
+        }
+    }
+    if (stillPending != pending)
+    {
+        if (stillPending.isEmpty())
+        {
+            state.remove(pendingRemovalsKey);
+        }
+        else
+        {
+            state.setValue(pendingRemovalsKey, stillPending);
+        }
+        state.sync();
+    }
 }
 
 bool ProfileSettings::usesSecretStore()
@@ -81,12 +194,11 @@ void ProfileSettings::write(QSettings &settings, const SecretKey &key, const QSt
     if (secret.isEmpty())
     {
         // Nothing to protect. Keep the empty key, as a fresh profile has it.
-        // If the entry cannot be removed it is merely hidden by that key, and
-        // the identifier stays so a later cleanup can still find it.
-        if (!secretId.isEmpty() && !activeStore->remove(account(secretId, key)))
+        // If the entry cannot be removed now it is hidden by that key, and
+        // its removal is tried again later.
+        if (!secretId.isEmpty())
         {
-            qWarning().noquote()
-                << "Could not remove" << key.name << "from the system credential store";
+            removeFromStore(account(secretId, key), key.name);
         }
         writeToFile(settings, key, QString());
         settings.sync();
@@ -105,6 +217,7 @@ void ProfileSettings::write(QSettings &settings, const SecretKey &key, const QSt
     }
     if (activeStore->write(account(secretId, key), secret))
     {
+        noLongerPending(account(secretId, key));
         settings.remove(key.name);
         settings.sync();
         return;
@@ -157,17 +270,9 @@ bool ProfileSettings::forgetSecrets(const QString &secretId)
         return true;
     }
 
-    bool allRemoved = true;
-    for (const SecretKey *key : allSecrets)
-    {
-        if (!activeStore->remove(account(secretId, *key)))
-        {
-            qWarning().noquote()
-                << "Could not remove" << key->name << "from the system credential store";
-            allRemoved = false;
-        }
-    }
-    return allRemoved;
+    // The profile that named these entries is about to lose the identifier.
+    // Entries that cannot be removed now are remembered and tried again.
+    return removeAllFromStore(secretId);
 }
 
 bool ProfileSettings::forgetSecrets(QSettings &settings)
@@ -184,6 +289,32 @@ void ProfileSettings::stripSecrets(QSettings &exportedCopy)
         exportedCopy.remove(key->name);
     }
     exportedCopy.remove(SecretId.name);
+    if (read(exportedCopy, DialDirectProxy).contains('@'))
+    {
+        exportedCopy.remove(DialDirectProxy.name);
+    }
+
+    // Free-form settings can carry credentials too: an extra "-password x",
+    // or a login URL with a ticket in its query.
+    static const QRegularExpression secretLike(
+        "(^|[^a-z])(password|passwd|secret|token|ticket|twf-?id|sid)([^a-z]|$)",
+        QRegularExpression::CaseInsensitiveOption
+    );
+    if (secretLike.match(read(exportedCopy, ExtraArguments)).hasMatch())
+    {
+        exportedCopy.remove(ExtraArguments.name);
+    }
+    const QString loginUrl = read(exportedCopy, LoginURL);
+    if (secretLike.match(loginUrl).hasMatch() || loginUrl.contains('@'))
+    {
+        write(
+            exportedCopy,
+            LoginURL,
+            QUrl(loginUrl).toString(
+                QUrl::RemoveQuery | QUrl::RemoveFragment | QUrl::RemoveUserInfo
+            )
+        );
+    }
 }
 
 void ProfileSettings::detachSecrets(QSettings &settings)

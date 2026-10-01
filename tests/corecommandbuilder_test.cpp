@@ -268,6 +268,34 @@ bool keepsCredentialFreeProxyAddressInLoggableArguments()
     );
 }
 
+bool extraArgumentsCannotRedirectManagedFiles()
+{
+    ConnectionProfile profile;
+    profile.endpoint.protocol = "easyconnect";
+    profile.debug.capturePcap = true;
+    profile.extraArguments =
+        "-debug-pcap-file /etc/passwd --client-data-file=/etc/shadow -graph-code-file /tmp/x "
+        "-debug-tls-log-file=/tmp/y -foo bar";
+
+    CoreRuntimePaths runtimePaths;
+    runtimePaths.debugPcapFile = "/private/logs/capture.pcap";
+    const CoreCommand command = CoreCommandBuilder::build(profile, runtimePaths);
+    return expectEqual(
+        command.arguments,
+        {
+            "-protocol", "easyconnect",
+            "-debug-pcap-file", "/private/logs/capture.pcap",
+            "-foo", "bar"
+        },
+        "extraArgumentsCannotRedirectManagedFiles"
+    )
+        && expectEqual(
+            command.rejectedExtraOptions,
+            {"debug-pcap-file", "client-data-file", "graph-code-file", "debug-tls-log-file"},
+            "reportsRejectedExtraOptions"
+        );
+}
+
 bool passesCredentialsAsArgumentsWhenEnabled()
 {
     ConnectionProfile profile;
@@ -390,6 +418,7 @@ int main(int argc, char *argv[])
         && keepsATrustOnlyOptionsOutOfEasyConnectCommand()
         && excludesCredentialsFromLoggableArguments()
         && redactsSecretsFromLoggableArgumentsOnly()
+        && extraArgumentsCannotRedirectManagedFiles()
         && keepsCredentialFreeProxyAddressInLoggableArguments()
         && passesCredentialsAsArgumentsWhenEnabled()
         && clearsManagedVariablesEvenWhenCredentialsAreEmpty()

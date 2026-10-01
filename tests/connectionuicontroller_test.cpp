@@ -64,6 +64,7 @@ struct ProxyCalls
     std::atomic<int> conflictChecks{0};
     std::atomic<int> applies{0};
     std::atomic<int> clears{0};
+    std::atomic<int> lastHttpPort{0};
     std::atomic<bool> failApply{false};
     // When set, clear() waits here so a test can hold the session busy.
     std::atomic<bool> holdClear{false};
@@ -85,8 +86,9 @@ public:
         return false;
     }
 
-    OperationStatus apply(const SystemProxyConfig &) override
+    OperationStatus apply(const SystemProxyConfig &config) override
     {
+        calls->lastHttpPort = config.httpPort;
         ++calls->applies;
         return calls->failApply
             ? OperationStatus::failure("apply failed")
@@ -228,6 +230,24 @@ bool appliesAutomaticProxyOnlyOnceConnected()
     if (fixture.proxyCalls.applies != 1 || !fixture.proxySession.isEnabled())
     {
         qCritical() << "the system proxy changed after it was already applied";
+        return false;
+    }
+    return true;
+}
+
+bool proxyUsesThePortsTheCoreWasStartedWith()
+{
+    Fixture fixture(true);
+    fixture.connectButton.click();
+    // The settings window stays usable while the core is starting.
+    fixture.settings.setValue("ZJUConnect/HTTPPort", 9999);
+    fixture.coreProcess->establishConnection();
+
+    if (!waitFor([&]() { return fixture.proxyCalls.applies == 1; }, 5000)
+        || fixture.proxyCalls.lastHttpPort != 11081)
+    {
+        qCritical() << "the system proxy was pointed at a port the running core does not use:"
+                    << fixture.proxyCalls.lastHttpPort.load();
         return false;
     }
     return true;
@@ -448,6 +468,7 @@ int main(int argc, char *argv[])
     dialogGuard.start(20);
 
     const bool passed = appliesAutomaticProxyOnlyOnceConnected()
+        && proxyUsesThePortsTheCoreWasStartedWith()
         && leavesProxyAloneWhenAutomaticProxyIsOff()
         && suspendsProxyWhileReconnecting()
         && keepsProxyOffAfterReconnectWhenUserClearedIt()

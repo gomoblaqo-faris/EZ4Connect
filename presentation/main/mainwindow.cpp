@@ -691,12 +691,27 @@ void MainWindow::refreshProfileMenu()
     deleteProfileAction->setEnabled(currentProfileIsManaged);
 }
 
+bool MainWindow::profileDialogIsOpen() const
+{
+    // Dialogs that edit the current profile hold on to its settings. The tray
+    // menu stays usable while they are open, and changing the profile from
+    // there would leave them writing to the wrong profile, or to none. The
+    // settings window is closed by the callers instead.
+    const QWidget *modal = QApplication::activeModalWidget();
+    return modal != nullptr && modal != settingWindow;
+}
+
 bool MainWindow::switchProfile(const QString &profileId)
 {
     if (!profileService->usesOverrideConfiguration()
         && profileId == currentProfileId)
     {
         return true;
+    }
+    if (profileDialogIsOpen())
+    {
+        refreshProfileMenu();
+        return false;
     }
 
     if (connectionSession != nullptr && connectionSession->isActive())
@@ -732,6 +747,10 @@ bool MainWindow::switchProfile(const QString &profileId)
 
 void MainWindow::createProfile()
 {
+    if (profileDialogIsOpen())
+    {
+        return;
+    }
     if (connectionSession != nullptr && connectionSession->isActive())
     {
         QMessageBox::warning(this, "Cannot Create Profile", "Disconnect the VPN before creating a profile.");
@@ -797,6 +816,10 @@ void MainWindow::createProfile()
 
 void MainWindow::openConfigurationGuide()
 {
+    if (profileDialogIsOpen())
+    {
+        return;
+    }
     if (connectionSession != nullptr && connectionSession->isActive())
     {
         QMessageBox::warning(
@@ -889,6 +912,10 @@ void MainWindow::promptConfigurationGuide(
 
 void MainWindow::renameCurrentProfile()
 {
+    if (profileDialogIsOpen())
+    {
+        return;
+    }
     bool ok = false;
     QString name = QInputDialog::getText(this, "Rename Profile", "Enter a new profile name:\n(letters, digits, underscores and hyphens only)", QLineEdit::Normal, currentProfileId, &ok);
     if (!ok)
@@ -944,6 +971,10 @@ void MainWindow::renameCurrentProfile()
 
 void MainWindow::deleteCurrentProfile()
 {
+    if (profileDialogIsOpen())
+    {
+        return;
+    }
     if (currentProfileId.isEmpty())
     {
         QMessageBox::warning(this, "Delete Failed", "The default profile cannot be deleted.");
@@ -1015,6 +1046,15 @@ void MainWindow::upgradeSettings()
     {
         profileService->migrateAutoStartSetting(
             ProfileSettings::read(*settings, ProfileSettings::LegacyAutoStart)
+        );
+    }
+    else if (action == SettingsMigrationAction::NewerThanApplication)
+    {
+        QMessageBox::warning(
+            this,
+            "Profile From a Newer Version",
+            "This profile was saved by a newer version of EZ4Connect. It is used as it is, "
+            "but settings this version does not know are ignored."
         );
     }
     else if (action == SettingsMigrationAction::RecommendReset)

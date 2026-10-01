@@ -5,6 +5,7 @@
 #include <QIODevice>
 #include <QMetaObject>
 #include <QRecursiveMutex>
+#include <QRegularExpression>
 #include <QThread>
 
 #include <cstdio>
@@ -98,12 +99,25 @@ void ApplicationLogger::appendCoreOutput(const QString &output)
         return;
     }
 
-    QStringList lines = output.split('\n', Qt::KeepEmptyParts);
+    QStringList lines = redactSecrets(output).split('\n', Qt::KeepEmptyParts);
     for (QString &line : lines)
     {
         line.prepend("[CORE] ");
     }
     publishEntry(lines.join('\n'));
+}
+
+QString ApplicationLogger::redactSecrets(const QString &text)
+{
+    // A ticket or session token is as good as the password, and logs get
+    // copied into bug reports.
+    static const QRegularExpression secretParameter(
+        R"(\b(ticket|token|access_token|refresh_token|twfid|sid|password|passwd|secret)=[^&\s"']+)",
+        QRegularExpression::CaseInsensitiveOption
+    );
+    QString redacted = text;
+    redacted.replace(secretParameter, "\\1=<redacted>");
+    return redacted;
 }
 
 void ApplicationLogger::qtMessageHandler(

@@ -1,5 +1,6 @@
 #include "authinfowindow.h"
 
+#include "application/applicationlogger.h"
 #include "infrastructure/coreprocess/consoleoutputdecoder.h"
 #include "infrastructure/coreprocess/coreexecutable.h"
 
@@ -50,13 +51,27 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
     connect(proc_, &QProcess::readyReadStandardOutput, this,
             [this]() { stdoutBuf_ += proc_->readAllStandardOutput(); });
     connect(proc_, &QProcess::readyReadStandardError, this,
-            [this]() { stdoutBuf_ += proc_->readAllStandardError(); });
+            [this]() { stderrBuf_ += proc_->readAllStandardError(); });
     connect(proc_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
             [this](int exitCode, QProcess::ExitStatus exitStatus) {
-                QString output = ConsoleOutputDecoder::decode(stdoutBuf_);
-                qInfo().noquote() << "Available authentication methods:\n" + output;
+                // The list is expected on one stream and the core's log lines
+                // on the other. Which is which is the core's business, so each
+                // stream is tried on its own before the two together.
+                QString output;
                 QJsonParseError jsonError;
-                QJsonDocument doc = QJsonDocument::fromJson(output.toUtf8(), &jsonError);
+                QJsonDocument doc;
+                for (const QByteArray &candidate : {stdoutBuf_, stderrBuf_, stdoutBuf_ + stderrBuf_})
+                {
+                    output = ConsoleOutputDecoder::decode(candidate);
+                    doc = QJsonDocument::fromJson(output.toUtf8(), &jsonError);
+                    if (jsonError.error == QJsonParseError::NoError)
+                    {
+                        break;
+                    }
+                }
+                // Login URLs in the reply can carry a ticket.
+                qInfo().noquote() << "Available authentication methods:\n"
+                    + ApplicationLogger::redactSecrets(output);
                 if (jsonError.error != QJsonParseError::NoError)
                 {
                     qWarning().noquote() << "Failed to parse authentication methods: " + jsonError.errorString();
