@@ -3,6 +3,8 @@
 
 #include <QtCore>
 
+#include <memory>
+
 #include "application/coreprocess.h"
 #include "infrastructure/coreprocess/coreoutputbuffer.h"
 
@@ -24,13 +26,17 @@ public:
 private:
     QString copyCoreForAppImage(const QString &programPath);
 
+    QTemporaryDir &privateTempDir();
+
     void processOutput(CoreOutputBuffer &buffer, const QByteArray &data, bool flushPending = false);
 
     void processOutputLines(const QList<QByteArray> &lines);
 
     QProcess *zjuConnectProcess;
 
-    QTemporaryDir *tempDir = nullptr;
+    std::unique_ptr<QTemporaryDir> tempDir;
+    QString copiedCoreSourcePath;
+    QString copiedCorePath;
 
     CoreOutputBuffer standardOutputBuffer;
     CoreOutputBuffer standardErrorBuffer;

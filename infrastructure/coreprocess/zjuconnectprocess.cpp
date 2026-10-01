@@ -6,9 +6,7 @@
 #include "infrastructure/storage/applicationpaths.h"
 #include <qcontainerfwd.h>
 #include <QDebug>
-#include <QDir>
 #include <QFileInfo>
-#include <QStandardPaths>
 
 ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
 {
@@ -155,15 +153,12 @@ void ZjuConnectProcess::processOutputLines(const QList<QByteArray> &lines)
 QString ZjuConnectProcess::copyCoreForAppImage(const QString &programPath)
 {
 #if defined(Q_OS_UNIX)
-    static QString cachedSourcePath;
-    static QString cachedTempPath;
-
     if (!qEnvironmentVariableIsSet("APPIMAGE")) {
         return programPath;
     }
 
-    if (cachedSourcePath == programPath && !cachedTempPath.isEmpty() && QFileInfo::exists(cachedTempPath)) {
-        return cachedTempPath;
+    if (copiedCoreSourcePath == programPath && !copiedCorePath.isEmpty() && QFileInfo::exists(copiedCorePath)) {
+        return copiedCorePath;
     }
 
     const QFileInfo sourceInfo(programPath);
@@ -171,11 +166,15 @@ QString ZjuConnectProcess::copyCoreForAppImage(const QString &programPath)
         return programPath;
     }
 
-    const QString tempRoot = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
-                             + "/EZ4Connect-" + QString::number(QCoreApplication::applicationPid());
-    QDir().mkpath(tempRoot);
+    // The copy is executed through sudo, so it must live in a directory that
+    // no other local user can create or write to. A predictable path under
+    // the shared temp location could be prepared in advance and swapped.
+    const QTemporaryDir &directory = privateTempDir();
+    if (!directory.isValid()) {
+        return programPath;
+    }
 
-    const QString tempPath = tempRoot + "/" + sourceInfo.fileName();
+    const QString tempPath = directory.filePath(sourceInfo.fileName());
     if (QFileInfo::exists(tempPath)) {
         QFile::remove(tempPath);
     }
@@ -185,15 +184,22 @@ QString ZjuConnectProcess::copyCoreForAppImage(const QString &programPath)
     }
 
     QFile::setPermissions(tempPath,
-                          QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner |
-                          QFileDevice::ReadGroup | QFileDevice::ExeGroup |
-                          QFileDevice::ReadOther | QFileDevice::ExeOther);
-    cachedSourcePath = programPath;
-    cachedTempPath = tempPath;
+                          QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    copiedCoreSourcePath = programPath;
+    copiedCorePath = tempPath;
     return tempPath;
 #else
     return programPath;
 #endif
+}
+
+QTemporaryDir &ZjuConnectProcess::privateTempDir()
+{
+    if (tempDir == nullptr)
+    {
+        tempDir = std::make_unique<QTemporaryDir>();
+    }
+    return *tempDir;
 }
 
 void ZjuConnectProcess::start(const ConnectionProfile &profile)
@@ -202,12 +208,7 @@ void ZjuConnectProcess::start(const ConnectionProfile &profile)
 
     // Both protocols can require a graph captcha. The UI chooses the response
     // format according to the active protocol.
-    if (tempDir == nullptr)
-    {
-        tempDir = new QTemporaryDir;
-        tempDir->setAutoRemove(true);
-    }
-    runtimePaths.graphCodeFile = tempDir->filePath("graph.jpg");
+    runtimePaths.graphCodeFile = privateTempDir().filePath("graph.jpg");
 
     if (profile.endpoint.protocol == "atrust")
     {
