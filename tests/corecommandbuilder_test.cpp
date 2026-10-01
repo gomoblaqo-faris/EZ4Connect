@@ -227,6 +227,47 @@ bool excludesCredentialsFromLoggableArguments()
     return safe;
 }
 
+bool redactsSecretsFromLoggableArgumentsOnly()
+{
+    ConnectionProfile profile;
+    profile.endpoint.protocol = "easyconnect";
+    profile.proxy.shadowsocksUrl = "ss://aes-256-gcm:hunter2@example.org:8388";
+    profile.proxy.dialDirectProxy = "socks://bob:hunter3@10.0.0.9:1080";
+    profile.extraArguments = "-password hunter4 --twf-id=hunter5";
+
+    const CoreCommand command = CoreCommandBuilder::build(profile);
+    const QStringList expectedLoggable{
+        "-protocol", "easyconnect",
+        "-shadowsocks-url", "<redacted>",
+        "-dial-direct-proxy", "<redacted>",
+        "-password", "<redacted>",
+        "--twf-id=<redacted>"
+    };
+    const QStringList expectedArguments{
+        "-protocol", "easyconnect",
+        "-shadowsocks-url", "ss://aes-256-gcm:hunter2@example.org:8388",
+        "-dial-direct-proxy", "socks://bob:hunter3@10.0.0.9:1080",
+        "-password", "hunter4",
+        "--twf-id=hunter5"
+    };
+    return expectEqual(command.loggableArguments, expectedLoggable, "redactsSecretsFromLoggableArguments")
+        && expectEqual(command.arguments, expectedArguments, "keepsSecretsInRealArguments");
+}
+
+bool keepsCredentialFreeProxyAddressInLoggableArguments()
+{
+    ConnectionProfile profile;
+    profile.endpoint.protocol = "easyconnect";
+    profile.proxy.dialDirectProxy = "http://10.0.0.9:8080";
+
+    const CoreCommand command = CoreCommandBuilder::build(profile);
+    return expectEqual(
+        command.loggableArguments,
+        {"-protocol", "easyconnect", "-dial-direct-proxy", "http://10.0.0.9:8080"},
+        "keepsCredentialFreeProxyAddressInLoggableArguments"
+    );
+}
+
 bool passesCredentialsAsArgumentsWhenEnabled()
 {
     ConnectionProfile profile;
@@ -348,6 +389,8 @@ int main(int argc, char *argv[])
         && addsEasyConnectOnlyOptionsForEasyConnect()
         && keepsATrustOnlyOptionsOutOfEasyConnectCommand()
         && excludesCredentialsFromLoggableArguments()
+        && redactsSecretsFromLoggableArgumentsOnly()
+        && keepsCredentialFreeProxyAddressInLoggableArguments()
         && passesCredentialsAsArgumentsWhenEnabled()
         && clearsManagedVariablesEvenWhenCredentialsAreEmpty()
         && quotesLoggableArgumentsWithoutChangingArguments()

@@ -113,7 +113,32 @@ ConnectionUiController::ConnectionUiController(
         connectionSession,
         &ConnectionSession::reconnectScheduled,
         this,
-        [](int) { qInfo().noquote() << "Reconnecting..."; }
+        [](int delayMs)
+        {
+            qInfo().noquote()
+                << QString("Reconnecting in %1 s...").arg(delayMs / 1000.0);
+        }
+    );
+    connect(
+        connectionSession,
+        &ConnectionSession::stateChanged,
+        this,
+        &ConnectionUiController::handleConnectionStateChanged
+    );
+    // Queued so a proxy operation requested here starts only after the
+    // session has finished reporting the previous one.
+    connect(
+        systemProxySession,
+        &SystemProxySession::busyChanged,
+        this,
+        [this](bool busy)
+        {
+            if (!busy && proxySyncPending)
+            {
+                syncSystemProxy();
+            }
+        },
+        Qt::QueuedConnection
     );
     connect(
         connectionSession,
@@ -122,6 +147,9 @@ ConnectionUiController::ConnectionUiController(
         [this](ZJU_ERROR error)
         {
             qInfo().noquote() << "VPN disconnected.";
+            proxyWanted = false;
+            proxyIntentInitialised = false;
+            proxySyncPending = false;
             const bool interrupted =
                 this->connectionSession->state() == ConnectionState::Interrupted;
             if (error != ZJU_ERROR::NONE || interrupted)
@@ -263,10 +291,68 @@ void ConnectionUiController::handleProxyClicked()
     }
     if (systemProxySession->isEnabled())
     {
-        systemProxySession->disable();
+        clearSystemProxy();
         return;
     }
+    proxyWanted = true;
+    syncSystemProxy();
+}
 
+void ConnectionUiController::clearSystemProxy()
+{
+    proxyWanted = false;
+    proxySyncPending = false;
+    systemProxySession->disable();
+}
+
+void ConnectionUiController::handleConnectionStateChanged(ConnectionState state)
+{
+    // The core only listens on the proxy ports while it is connected.
+    // Pointing the system at them during login or a reconnect would break
+    // every proxied app until the connection is back.
+    if (state == ConnectionState::Running)
+    {
+        if (!proxyIntentInitialised)
+        {
+            proxyIntentInitialised = true;
+            proxyWanted = settings()->value("Common/AutoSetProxy", false).toBool();
+        }
+        proxyButton->show();
+        syncSystemProxy();
+    }
+    else if (state == ConnectionState::Reconnecting)
+    {
+        proxyButton->hide();
+        syncSystemProxy();
+    }
+}
+
+void ConnectionUiController::syncSystemProxy()
+{
+    if (systemProxySession->isBusy())
+    {
+        proxySyncPending = true;
+        return;
+    }
+    proxySyncPending = false;
+
+    const ConnectionState state = connectionSession->state();
+    if (state == ConnectionState::Running)
+    {
+        if (proxyWanted && !systemProxySession->isEnabled())
+        {
+            enableSystemProxy();
+        }
+    }
+    else if (state == ConnectionState::Reconnecting
+             && systemProxySession->isEnabled())
+    {
+        systemProxySession->disable();
+    }
+}
+
+void ConnectionUiController::enableSystemProxy()
+{
     const int httpPort = settings()->value("ZJUConnect/HTTPPort").toInt();
     const int socksPort = settings()->value("ZJUConnect/SOCKS5Port").toInt();
     const SystemProxyConfig proxyConfig{
@@ -280,7 +366,12 @@ void ConnectionUiController::handleProxyClicked()
         this,
         [this, proxyConfig, httpPort, socksPort](bool conflict)
         {
-            if (!connectionSession->isActive())
+            const auto stillWanted = [this]()
+            {
+                return proxyWanted
+                    && connectionSession->state() == ConnectionState::Running;
+            };
+            if (!stillWanted())
             {
                 return;
             }
@@ -303,6 +394,7 @@ void ConnectionUiController::handleProxyClicked()
                 messageBox.setCheckBox(dontShowCheckBox);
                 if (messageBox.exec() == QMessageBox::No)
                 {
+                    proxyWanted = false;
                     return;
                 }
                 if (dontShowCheckBox->isChecked())
@@ -317,6 +409,12 @@ void ConnectionUiController::handleProxyClicked()
             else if (conflict)
             {
                 qInfo().noquote() << "Skipping the system proxy overwrite warning (suppressed in settings)";
+            }
+
+            // The connection may have dropped while the warning was open.
+            if (!stillWanted())
+            {
+                return;
             }
 
             qInfo().noquote()
@@ -358,12 +456,6 @@ void ConnectionUiController::startConnection(
 
     connectButton->setText("Disconnect");
     trayConnectAction->setText("Disconnect");
-    proxyButton->show();
-
-    if (settings()->value("Common/AutoSetProxy", false).toBool())
-    {
-        proxyButton->click();
-    }
 }
 
 void ConnectionUiController::showConnectionError(ZJU_ERROR error)

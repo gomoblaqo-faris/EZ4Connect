@@ -52,6 +52,66 @@ QString quoteArgumentForLog(const QString &argument)
     return quoted;
 }
 
+QString optionName(const QString &argument)
+{
+    if (!argument.startsWith('-'))
+    {
+        return {};
+    }
+
+    QString name = argument;
+    while (name.startsWith('-'))
+    {
+        name.remove(0, 1);
+    }
+    return name.section('=', 0, 0);
+}
+
+bool carriesSecret(const QString &name, const QString &value)
+{
+    static const QStringList secretOptions{
+        "password",
+        "totp-secret",
+        "cert-password",
+        "twf-id",
+        "shadowsocks-url"
+    };
+    // A proxy address is useful in a log unless it embeds credentials.
+    return secretOptions.contains(name)
+        || (name == "dial-direct-proxy" && value.contains('@'));
+}
+
+QStringList redactSecrets(const QStringList &arguments)
+{
+    const QString placeholder = QStringLiteral("<redacted>");
+
+    QStringList redacted;
+    redacted.reserve(arguments.size());
+    for (qsizetype index = 0; index < arguments.size(); ++index)
+    {
+        const QString &argument = arguments.at(index);
+        const QString name = optionName(argument);
+        const qsizetype separator = argument.indexOf('=');
+        if (!name.isEmpty() && separator >= 0)
+        {
+            redacted << (carriesSecret(name, argument.mid(separator + 1))
+                ? argument.left(separator + 1) + placeholder
+                : argument);
+            continue;
+        }
+
+        redacted << argument;
+        if (!name.isEmpty()
+            && index + 1 < arguments.size()
+            && carriesSecret(name, arguments.at(index + 1)))
+        {
+            redacted << placeholder;
+            ++index;
+        }
+    }
+    return redacted;
+}
+
 void appendOption(QStringList &arguments, const QString &name, const QString &value)
 {
     if (!value.isEmpty())
@@ -242,7 +302,8 @@ CoreCommand CoreCommandBuilder::build(const ConnectionProfile &profile, const Co
     // An empty argument would make the core stop parsing every flag after it.
     arguments.append(QProcess::splitCommand(profile.extraArguments));
 
-    command.loggableArguments = arguments;
+    // Extra arguments and proxy URLs can carry secrets of their own.
+    command.loggableArguments = redactSecrets(arguments);
     command.arguments = credentialArguments + arguments;
     return command;
 }

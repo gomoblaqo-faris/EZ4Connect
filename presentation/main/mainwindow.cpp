@@ -218,7 +218,7 @@ MainWindow::MainWindow(
                             }
                         },
                         Qt::SingleShotConnection);
-                systemProxySession->disable();
+                connectionUiController->clearSystemProxy();
             });
 
     // 文件-清理登录数据
@@ -767,6 +767,18 @@ void MainWindow::createProfile()
         QMessageBox::critical(this, "Create Failed", "Could not create the profile.");
         return;
     }
+    // A profile deleted by an older version may have left its login cache
+    // behind under this name.
+    if (!ApplicationPaths::removeProfileData(newProfileId))
+    {
+        qWarning().noquote() << "Could not clear old login data for profile: " + newProfileId;
+        QMessageBox::warning(
+            this,
+            "Old Login Data",
+            "Login data left under this profile name by an earlier profile could not be cleared.\n"
+            "Use File → Clear Login Cache before connecting."
+        );
+    }
 
     settings = profileService->settings();
     currentProfileId = profileService->currentProfileId();
@@ -905,10 +917,21 @@ void MainWindow::renameCurrentProfile()
     {
         settingWindow->close();
     }
+    const QString previousProfileId = currentProfileId;
     if (!profileService->renameCurrent(normalizedName))
     {
         QMessageBox::warning(this, "Rename Failed", "A profile with that name already exists, or this profile cannot be renamed.");
         return;
+    }
+    if (!ApplicationPaths::moveProfileData(previousProfileId, normalizedName))
+    {
+        qWarning().noquote() << "Could not move login data to the renamed profile: " + normalizedName;
+        QMessageBox::warning(
+            this,
+            "Login Data Not Moved",
+            "The profile was renamed, but its login data could not be moved.\n"
+            "You may have to log in and trust this device again."
+        );
     }
 
     currentProfileId = profileService->currentProfileId();
@@ -953,6 +976,15 @@ void MainWindow::deleteCurrentProfile()
     {
         QMessageBox::warning(this, "Delete Failed", "Could not delete the profile file.");
         return;
+    }
+    if (!ApplicationPaths::removeProfileData(removedProfileId))
+    {
+        qWarning().noquote() << "Could not remove login data of the deleted profile: " + removedProfileId;
+        QMessageBox::warning(
+            this,
+            "Login Data Not Removed",
+            "The profile was deleted, but its login data could not be removed."
+        );
     }
 
     currentProfileId = profileService->currentProfileId();

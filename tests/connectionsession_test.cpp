@@ -158,6 +158,33 @@ bool cancelledInteractiveInputSubmitsNewlineBeforeStopping()
     }
     return true;
 }
+
+bool cancelledInteractiveInputEndsWithoutError()
+{
+    auto *coreProcess = new FakeCoreProcess();
+    ConnectionSession session(coreProcess);
+    ConnectionProfile profile;
+    ZJU_ERROR finishedError = ZJU_ERROR::OTHER;
+    QObject::connect(
+        &session,
+        &ConnectionSession::finished,
+        [&](ZJU_ERROR error) { finishedError = error; }
+    );
+
+    session.start(profile, {});
+    session.cancelInteractiveInput();
+    // The blank line that unblocks the prompt makes the core report this.
+    emit coreProcess->error(ZJU_ERROR::INTERACTIVE_ERROR);
+    coreProcess->complete();
+
+    if (finishedError != ZJU_ERROR::NONE
+        || session.state() != ConnectionState::Disconnected)
+    {
+        qCritical() << "cancelling a prompt was reported as a connection error";
+        return false;
+    }
+    return true;
+}
 }
 
 int main(int argc, char *argv[])
@@ -166,5 +193,6 @@ int main(int argc, char *argv[])
     return delegatesProcessLifecycleThroughPort()
         && distinguishesInterruptedConnectionFromStartupFailure()
         && emptySudoPasswordStopsTheSession()
-        && cancelledInteractiveInputSubmitsNewlineBeforeStopping() ? 0 : 1;
+        && cancelledInteractiveInputSubmitsNewlineBeforeStopping()
+        && cancelledInteractiveInputEndsWithoutError() ? 0 : 1;
 }

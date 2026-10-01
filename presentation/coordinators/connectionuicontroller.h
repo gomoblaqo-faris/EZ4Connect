@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "core/connectionerror.h"
+#include "core/connectionsessionstate.h"
 
 class QAction;
 class ApplicationLogger;
@@ -45,9 +46,16 @@ public:
         QObject *parent = nullptr
     );
 
+    // Turns the system proxy off at the user's request, so it is not turned
+    // back on after a reconnect.
+    void clearSystemProxy();
+
 private:
     void handleConnectClicked();
     void handleProxyClicked();
+    void enableSystemProxy();
+    void syncSystemProxy();
+    void handleConnectionStateChanged(ConnectionState state);
     void startConnection(
         const QString &username,
         const QString &password,
@@ -66,6 +74,10 @@ private:
     SettingsProvider settingsProvider;
     ProfileIdProvider profileIdProvider;
     NotificationHandler notificationHandler;
+    // Whether the proxy should be on whenever this session is connected.
+    bool proxyWanted = false;
+    bool proxyIntentInitialised = false;
+    bool proxySyncPending = false;
 };
 
 #endif // CONNECTIONUICONTROLLER_H

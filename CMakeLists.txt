@@ -243,6 +243,14 @@ if(BUILD_TESTING)
     target_link_libraries(profilemanager_test Qt::Core)
     add_test(NAME profilemanager_test COMMAND profilemanager_test)
 
+    add_executable(applicationpaths_test
+        tests/applicationpaths_test.cpp
+        infrastructure/storage/applicationpaths.cpp
+    )
+    target_include_directories(applicationpaths_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(applicationpaths_test Qt::Core)
+    add_test(NAME applicationpaths_test COMMAND applicationpaths_test)
+
     add_executable(configurationguidedialog_test
         tests/configurationguidedialog_test.cpp
         presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
@@ -259,6 +267,38 @@ if(BUILD_TESTING)
     )
     add_test(NAME configurationguidedialog_test COMMAND configurationguidedialog_test)
     set_tests_properties(configurationguidedialog_test PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    )
+
+    add_executable(connectionuicontroller_test
+        tests/connectionuicontroller_test.cpp
+        presentation/coordinators/connectionuicontroller.cpp
+        presentation/coordinators/authdialogcoordinator.cpp
+        presentation/dialogs/loginwindow/loginwindow.cpp
+        presentation/dialogs/sudowindow/sudowindow.cpp
+        presentation/dialogs/ssologinwebview/ssologinwebview.cpp
+        presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
+        presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
+        presentation/presentationhelpers.cpp
+        application/applicationlogger.cpp
+        application/coreprocess.h
+        application/connectionsession.cpp
+        application/systemproxysession.cpp
+        core/connectionsessionstate.cpp
+        infrastructure/coreprocess/coreexecutable.cpp
+        infrastructure/platform/privileges.cpp
+        infrastructure/settings/settingsprofileloader.cpp
+    )
+    target_include_directories(connectionuicontroller_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(connectionuicontroller_test
+        Qt::Core
+        Qt::Concurrent
+        Qt::Gui
+        Qt::Widgets
+        Qt::WebEngineWidgets
+    )
+    add_test(NAME connectionuicontroller_test COMMAND connectionuicontroller_test)
+    set_tests_properties(connectionuicontroller_test PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )
 

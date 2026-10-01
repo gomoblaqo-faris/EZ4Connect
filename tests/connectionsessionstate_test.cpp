@@ -166,6 +166,137 @@ bool requestedStopIsNeverReconnected()
     }
     return true;
 }
+
+bool requestedStopDiscardsRecordedErrors()
+{
+    ConnectionSessionState session;
+    session.requestStart({false, 1000});
+    session.recordError(ZJU_ERROR::INVALID_DETAIL);
+    session.requestStop();
+    // Cancelling a prompt makes the core complain while it shuts down.
+    session.recordError(ZJU_ERROR::INTERACTIVE_ERROR);
+
+    if (session.processFinished() != ProcessFinishAction::Complete
+        || session.state() != ConnectionState::Disconnected
+        || session.error() != ZJU_ERROR::NONE)
+    {
+        qCritical() << "requestedStopDiscardsRecordedErrors failed";
+        return false;
+    }
+    return true;
+}
+
+bool establishedConnectionDiscardsStartupErrors()
+{
+    ConnectionSessionState session;
+    session.requestStart({false, 1000});
+    session.recordError(ZJU_ERROR::CAPTCHA_FAILED);
+    session.connectionEstablished();
+
+    if (session.error() != ZJU_ERROR::NONE)
+    {
+        qCritical() << "establishedConnectionDiscardsStartupErrors kept a stale error";
+        return false;
+    }
+    return true;
+}
+
+bool cancellingPendingReconnectDiscardsError()
+{
+    ConnectionSessionState session;
+    session.requestStart({true, 1000});
+    session.connectionEstablished();
+    session.recordError(ZJU_ERROR::AUTH_EXPIRED);
+    session.processFinished();
+    session.requestStop();
+
+    if (session.state() != ConnectionState::Disconnected
+        || session.error() != ZJU_ERROR::NONE)
+    {
+        qCritical() << "cancellingPendingReconnectDiscardsError failed";
+        return false;
+    }
+    return true;
+}
+
+bool backsOffAndGivesUpAfterRepeatedReconnects()
+{
+    ReconnectPolicy policy{true, 1000};
+    policy.maxAttempts = 3;
+    policy.maxDelayMs = 3000;
+
+    ConnectionSessionState session;
+    session.requestStart(policy);
+    session.connectionEstablished();
+
+    for (const int expectedDelayMs : {1000, 2000, 3000})
+    {
+        session.recordError(ZJU_ERROR::OTHER);
+        if (session.processFinished() != ProcessFinishAction::Reconnect
+            || session.reconnectDelayMs() != expectedDelayMs)
+        {
+            qCritical() << "backsOffAndGivesUpAfterRepeatedReconnects expected delay"
+                        << expectedDelayMs << "got" << session.reconnectDelayMs();
+            return false;
+        }
+        session.beginReconnect();
+    }
+
+    session.recordError(ZJU_ERROR::OTHER);
+    if (session.processFinished() != ProcessFinishAction::Complete
+        || session.state() != ConnectionState::Failed
+        || session.error() != ZJU_ERROR::OTHER)
+    {
+        qCritical() << "backsOffAndGivesUpAfterRepeatedReconnects kept retrying";
+        return false;
+    }
+    return true;
+}
+
+bool establishedConnectionResetsReconnectAttempts()
+{
+    ReconnectPolicy policy{true, 1000};
+    policy.maxAttempts = 1;
+
+    ConnectionSessionState session;
+    session.requestStart(policy);
+    session.connectionEstablished();
+    session.recordError(ZJU_ERROR::AUTH_EXPIRED);
+    session.processFinished();
+    session.beginReconnect();
+    session.connectionEstablished();
+    session.recordError(ZJU_ERROR::AUTH_EXPIRED);
+
+    if (session.processFinished() != ProcessFinishAction::Reconnect
+        || session.reconnectDelayMs() != 1000)
+    {
+        qCritical() << "establishedConnectionResetsReconnectAttempts failed";
+        return false;
+    }
+    return true;
+}
+
+bool reconnectDelayNeverDropsBelowTheConfiguredDelay()
+{
+    ReconnectPolicy policy{true, 120000};
+    policy.maxDelayMs = 60000;
+
+    ConnectionSessionState session;
+    session.requestStart(policy);
+    session.connectionEstablished();
+    session.recordError(ZJU_ERROR::OTHER);
+    session.processFinished();
+    session.beginReconnect();
+    session.recordError(ZJU_ERROR::OTHER);
+
+    if (session.processFinished() != ProcessFinishAction::Reconnect
+        || session.reconnectDelayMs() != 120000)
+    {
+        qCritical() << "reconnectDelayNeverDropsBelowTheConfiguredDelay failed";
+        return false;
+    }
+    return true;
+}
 }
 
 int main(int argc, char *argv[])
@@ -178,6 +309,12 @@ int main(int argc, char *argv[])
         && reconnectsWhenEstablishedConnectionDropsSilently()
         && silentDropWithoutReconnectPolicyEndsAsInterrupted()
         && requestedStopIsNeverReconnected()
+        && requestedStopDiscardsRecordedErrors()
+        && establishedConnectionDiscardsStartupErrors()
+        && cancellingPendingReconnectDiscardsError()
+        && backsOffAndGivesUpAfterRepeatedReconnects()
+        && establishedConnectionResetsReconnectAttempts()
+        && reconnectDelayNeverDropsBelowTheConfiguredDelay()
         ? 0
         : 1;
 }

@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QStandardPaths>
 
@@ -13,6 +14,21 @@ QString safeProfileName(const QString &profileId)
     QString name = profileId.isEmpty() ? "default" : profileId;
     name.replace(QRegularExpression("[^A-Za-z0-9_.-]"), "_");
     return name;
+}
+
+QString profileDataDirectory(const QString &profileId)
+{
+    return QDir(
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+    ).filePath("profiles/" + profileId);
+}
+
+bool isNamedProfileId(const QString &profileId)
+{
+    static const QRegularExpression pattern(
+        QRegularExpression::anchoredPattern("[A-Za-z0-9_-]+")
+    );
+    return pattern.match(profileId).hasMatch();
 }
 
 void createPrivateFile(const QString &path)
@@ -28,15 +44,7 @@ void createPrivateFile(const QString &path)
 
 QString ApplicationPaths::clientDataFile(const QString &profileId)
 {
-    QDir dataDirectory(
-        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-    );
-    if (!dataDirectory.exists())
-    {
-        dataDirectory.mkpath(".");
-    }
-
-    QDir profileDirectory(dataDirectory.filePath("profiles/" + profileId));
+    QDir profileDirectory(profileDataDirectory(profileId));
     if (!profileDirectory.exists())
     {
         profileDirectory.mkpath(".");
@@ -54,6 +62,44 @@ QString ApplicationPaths::clientDataFile(const QString &profileId)
 void ApplicationPaths::clearClientData(const QString &profileId)
 {
     QFile::remove(clientDataFile(profileId));
+}
+
+bool ApplicationPaths::removeProfileData(const QString &profileId)
+{
+    if (!isNamedProfileId(profileId))
+    {
+        return false;
+    }
+
+    QDir profileDirectory(profileDataDirectory(profileId));
+    return !profileDirectory.exists() || profileDirectory.removeRecursively();
+}
+
+bool ApplicationPaths::moveProfileData(
+    const QString &oldProfileId,
+    const QString &newProfileId
+)
+{
+    if (!isNamedProfileId(oldProfileId)
+        || !isNamedProfileId(newProfileId)
+        || oldProfileId == newProfileId)
+    {
+        return false;
+    }
+
+    // Anything already under the new name belongs to a profile that no
+    // longer exists.
+    if (!removeProfileData(newProfileId))
+    {
+        return false;
+    }
+
+    const QString source = profileDataDirectory(oldProfileId);
+    if (!QFileInfo::exists(source))
+    {
+        return true;
+    }
+    return QDir().rename(source, profileDataDirectory(newProfileId));
 }
 
 QString ApplicationPaths::logDirectory()

@@ -18,6 +18,11 @@ struct ReconnectPolicy
 {
     bool enabled = false;
     int delayMs = 1000;
+    // Consecutive attempts allowed before giving up. The count starts over
+    // once a connection is established.
+    int maxAttempts = 5;
+    // The delay doubles with each consecutive attempt up to this limit.
+    int maxDelayMs = 60000;
 };
 
 enum class ProcessFinishAction
@@ -48,6 +53,7 @@ private:
     ConnectionState currentState = ConnectionState::Disconnected;
     ZJU_ERROR currentError = ZJU_ERROR::NONE;
     ReconnectPolicy reconnectPolicy;
+    int reconnectAttempts = 0;
     bool desiredConnected = false;
 };
 

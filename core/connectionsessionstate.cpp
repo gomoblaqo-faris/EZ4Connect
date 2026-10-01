@@ -1,5 +1,7 @@
 #include "connectionsessionstate.h"
 
+#include <algorithm>
+
 ConnectionState ConnectionSessionState::state() const
 {
     return currentState;
@@ -25,7 +27,14 @@ bool ConnectionSessionState::wantsConnection() const
 
 int ConnectionSessionState::reconnectDelayMs() const
 {
-    return reconnectPolicy.delayMs;
+    // The configured delay is a floor, so a limit below it never shortens it.
+    const int limit = std::max(reconnectPolicy.delayMs, reconnectPolicy.maxDelayMs);
+    int delay = reconnectPolicy.delayMs;
+    for (int attempt = 1; attempt < reconnectAttempts && delay < limit; ++attempt)
+    {
+        delay = std::min(delay * 2, limit);
+    }
+    return delay;
 }
 
 bool ConnectionSessionState::requestStart(const ReconnectPolicy &policy)
@@ -36,6 +45,7 @@ bool ConnectionSessionState::requestStart(const ReconnectPolicy &policy)
     }
 
     reconnectPolicy = policy;
+    reconnectAttempts = 0;
     desiredConnected = true;
     currentError = ZJU_ERROR::NONE;
     currentState = ConnectionState::Starting;
@@ -46,12 +56,22 @@ void ConnectionSessionState::connectionEstablished()
 {
     if (currentState == ConnectionState::Starting)
     {
+        // Errors logged on the way to a working connection, such as a failed
+        // first captcha attempt, no longer describe this session.
+        currentError = ZJU_ERROR::NONE;
+        reconnectAttempts = 0;
         currentState = ConnectionState::Running;
     }
 }
 
 void ConnectionSessionState::recordError(ZJU_ERROR error)
 {
+    // Whatever the core reports while shutting down on request is not a
+    // failure the user needs to hear about.
+    if (currentState == ConnectionState::Stopping)
+    {
+        return;
+    }
     if (currentError == ZJU_ERROR::NONE)
     {
         currentError = error;
@@ -63,11 +83,13 @@ bool ConnectionSessionState::requestStop()
     desiredConnected = false;
     if (currentState == ConnectionState::Reconnecting)
     {
+        currentError = ZJU_ERROR::NONE;
         currentState = ConnectionState::Disconnected;
         return false;
     }
     if (currentState == ConnectionState::Starting || currentState == ConnectionState::Running)
     {
+        currentError = ZJU_ERROR::NONE;
         currentState = ConnectionState::Stopping;
         return true;
     }
@@ -84,8 +106,10 @@ ProcessFinishAction ConnectionSessionState::processFinished()
         && currentError == ZJU_ERROR::NONE;
     if (desiredConnected
         && reconnectPolicy.enabled
+        && reconnectAttempts < reconnectPolicy.maxAttempts
         && (droppedSilently || isReconnectable(currentError)))
     {
+        ++reconnectAttempts;
         currentState = ConnectionState::Reconnecting;
         return ProcessFinishAction::Reconnect;
     }
