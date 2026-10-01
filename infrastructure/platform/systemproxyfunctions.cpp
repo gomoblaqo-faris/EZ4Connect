@@ -163,12 +163,12 @@ QStringList macOSGetActiveNetworkServices()
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        showProxyError("获取网络服务失败", "执行命令失败：" + process.errorString());
+        showProxyError("Failed to List Network Services", "Command failed: " + process.errorString());
         return {};
     }
     if (process.exitCode() != 0)
     {
-        showProxyError("获取网络服务失败", "无法获取网络服务：" + process.readAllStandardError());
+        showProxyError("Failed to List Network Services", "Could not list network services: " + process.readAllStandardError());
         return {};
     }
     /*
@@ -227,12 +227,12 @@ bool macOSIsSystemProxySet(macOSProxyType proxyType, const QString networkServic
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        showProxyError("获取系统代理设置失败", "执行命令失败：" + process.errorString());
+        showProxyError("Failed to Read System Proxy Settings", "Command failed: " + process.errorString());
         return true;
     }
     if (process.exitCode() != 0)
     {
-        showProxyError("获取系统代理设置失败", "无法获取系统代理设置：" + process.readAllStandardError());
+        showProxyError("Failed to Read System Proxy Settings", "Could not read system proxy settings: " + process.readAllStandardError());
         return true;
     }
     QString output = process.readAllStandardOutput();
@@ -269,12 +269,12 @@ void macOSSetSystemProxy(macOSProxyType proxyType, const QString &networkService
     setProcess.waitForFinished();
     if (setProcess.error() != QProcess::UnknownError)
     {
-        showProxyError("设置系统代理失败", "执行命令失败：" + setProcess.errorString());
+        showProxyError("Failed to Set System Proxy", "Command failed: " + setProcess.errorString());
         return;
     }
     if (setProcess.exitCode() != 0)
     {
-        showProxyError("设置系统代理失败", "无法设置系统代理：" + setProcess.readAllStandardError());
+        showProxyError("Failed to Set System Proxy", "Could not set the system proxy: " + setProcess.readAllStandardError());
         return;
     }
     enableArgs << networkService << "on";
@@ -283,12 +283,12 @@ void macOSSetSystemProxy(macOSProxyType proxyType, const QString &networkService
     enableProcess.waitForFinished();
     if (enableProcess.error() != QProcess::UnknownError)
     {
-        showProxyError("启用系统代理失败", "执行命令失败：" + enableProcess.errorString());
+        showProxyError("Failed to Enable System Proxy", "Command failed: " + enableProcess.errorString());
         return;
     }
     if (enableProcess.exitCode() != 0)
     {
-        showProxyError("启用系统代理失败", "无法启用系统代理：" + enableProcess.readAllStandardError());
+        showProxyError("Failed to Enable System Proxy", "Could not enable the system proxy: " + enableProcess.readAllStandardError());
         return;
     }
 }
@@ -314,12 +314,12 @@ void macOSDisableSystemProxy(macOSProxyType proxyType, const QString &networkSer
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        showProxyError("禁用系统代理失败", "执行命令失败：" + process.errorString());
+        showProxyError("Failed to Disable System Proxy", "Command failed: " + process.errorString());
         return;
     }
     if (process.exitCode() != 0)
     {
-        showProxyError("禁用系统代理失败", "无法禁用系统代理：" + process.readAllStandardError());
+        showProxyError("Failed to Disable System Proxy", "Could not disable the system proxy: " + process.readAllStandardError());
         return;
     }
 }
@@ -335,12 +335,12 @@ void macOSSetProxyBypass(const QString &networkService, const QString &bypass)
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        showProxyError("设置代理绕过失败", "执行命令失败：" + process.errorString());
+        showProxyError("Failed to Set Proxy Bypass", "Command failed: " + process.errorString());
         return;
     }
     if (process.exitCode() != 0)
     {
-        showProxyError("设置代理绕过失败", "无法设置代理绕过：" + process.readAllStandardError());
+        showProxyError("Failed to Set Proxy Bypass", "Could not set proxy bypass domains: " + process.readAllStandardError());
         return;
     }
 }
@@ -455,7 +455,7 @@ void linuxSetSystemProxy(const QString &proxyServer, int httpPort, int socksPort
 
     if (results.count(true) != actions.size())
     {
-        showProxyError("设置系统代理失败", "存在失败的命令");
+        showProxyError("Failed to Set System Proxy", "One or more commands failed");
     }
 }
 

@@ -21,11 +21,11 @@ QString CoreExecutable::version(QObject *parent)
     process.start(path(), {"-version"});
     if (!process.waitForStarted())
     {
-        throw std::runtime_error("核心无法启动");
+        throw std::runtime_error("Failed to start the core");
     }
     if (!process.waitForFinished())
     {
-        throw std::runtime_error("核心运行超时");
+        throw std::runtime_error("The core timed out");
     }
 
     const QByteArray errorOutput = process.readAllStandardError();
@@ -38,7 +38,7 @@ QString CoreExecutable::version(QObject *parent)
     const QString prefix("ZJU Connect v");
     if (!output.startsWith(prefix))
     {
-        throw std::runtime_error("无法解析核心版本号");
+        throw std::runtime_error("Could not parse the core version");
     }
     return output.mid(prefix.size()).trimmed();
 }

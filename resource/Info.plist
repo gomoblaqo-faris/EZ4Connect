@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>zh-CN</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>EZ4Connect</string>
 	<key>CFBundleIconFile</key>

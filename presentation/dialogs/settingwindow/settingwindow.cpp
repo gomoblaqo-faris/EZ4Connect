@@ -34,7 +34,7 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 QUrl::fromLocalFile(ApplicationPaths::logDirectory())
             ))
         {
-            QMessageBox::warning(this, "日志目录", "无法打开日志目录。");
+            QMessageBox::warning(this, "Log Directory", "Could not open the log directory.");
         }
     });
 
@@ -84,7 +84,7 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->resetDefaultPushButton, &QPushButton::clicked,
         [&]()
         {
-            int status = QMessageBox::warning(this, "警告", "将会重置所有设置，是否继续？", QMessageBox::Ok, QMessageBox::Cancel);
+            int status = QMessageBox::warning(this, "Warning", "This will reset all settings. Continue?", QMessageBox::Ok, QMessageBox::Cancel);
             if (status == QMessageBox::Ok)
             {
                 settings->clear();
@@ -97,11 +97,11 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->importPushButton, &QPushButton::clicked,
             [&]()
             {
-                QString filename = QFileDialog::getOpenFileName(this, "选择配置文件",
+                QString filename = QFileDialog::getOpenFileName(this, "Choose a Configuration File",
                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
                     "Config Ini(*.ini);;All Files(*.*)");
                 if (filename.isEmpty()) {
-                    QMessageBox::critical(this, "错误", "未选择配置文件，不会带来任何更改。");
+                    QMessageBox::critical(this, "Error", "No configuration file selected. Nothing was changed.");
                     return;
                 }
                 QSettings newSettings(filename, QSettings::IniFormat);
@@ -115,12 +115,12 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->exportPushButton, &QPushButton::clicked,
             [&]()
             {
-                QString filename = QFileDialog::getSaveFileName(this, "选择保存位置",
+                QString filename = QFileDialog::getSaveFileName(this, "Choose Where to Save",
                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
                     "Config Ini(*.ini);;All Files(*.*)");
                 if (filename.isEmpty())
                 {
-                    QMessageBox::critical(this, "错误", "未选择配置文件保存位置。");
+                    QMessageBox::critical(this, "Error", "No save location selected.");
                     return;
                 }
                 settings->sync();
@@ -150,7 +150,7 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->certFileBrowseButton, &QPushButton::clicked,
         [&]()
         {
-            QString filename = QFileDialog::getOpenFileName(this, "选择证书文件",
+            QString filename = QFileDialog::getOpenFileName(this, "Choose a Certificate File",
                 QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
                 "P12 Certificate(*.p12 *.pfx);;All Files(*.*)");
             if (!filename.isEmpty())
@@ -204,8 +204,8 @@ bool SettingWindow::shouldCheckCredential()
 void SettingWindow::loadSettings()
 {
     ui->configVersionLabel->setText(
-        "当前配置文件版本：" + QString::number(settings->value("Common/ConfigVersion").toInt()) +
-        "\n程序配置文件版本：" +
+        "Profile config version: " + QString::number(settings->value("Common/ConfigVersion").toInt()) +
+        "\nApp config version: " +
         QString::number(ApplicationConstants::ConfigVersion)
     );
     ui->usernameLineEdit->setText(settings->value("Credential/Username").toString());

@@ -31,11 +31,11 @@ ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
             return;
         }
         QString errorString = zjuConnectProcess->errorString();
-        qWarning().noquote() << "退出原因：" + errorString;
+        qWarning().noquote() << "Exit reason: " + errorString;
 
         if (errorString.contains("No such file or directory") || errorString.contains("not found") || errorString.contains("找不到"))
         {
-            qWarning().noquote() << "核心路径：" + zjuConnectProcess->program();
+            qWarning().noquote() << "Core path: " + zjuConnectProcess->program();
             emit error(ZJU_ERROR::PROGRAM_NOT_FOUND);
         }
     });
@@ -45,7 +45,7 @@ ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
         processOutput(standardOutputBuffer, zjuConnectProcess->readAllStandardOutput(), true);
         processOutput(standardErrorBuffer, zjuConnectProcess->readAllStandardError(), true);
         stopRequested = false;
-        qInfo().noquote() << "退出原因：进程已结束";
+        qInfo().noquote() << "Exit reason: process finished";
         emit finished();
     });
 }
@@ -224,16 +224,16 @@ void ZjuConnectProcess::start(const ConnectionProfile &profile)
     runtimePaths.debugTlsLogFile = debugPaths.tlsLogFile;
 
     const CoreCommand command = CoreCommandBuilder::build(profile, runtimePaths);
-    qInfo().noquote() << "VPN 启动！参数：" + command.loggableCommandLine();
+    qInfo().noquote() << "VPN starting. Arguments: " + command.loggableCommandLine();
 
     if (!profile.credentials.totpSecret.isEmpty())
     {
-        qInfo().noquote() << "使用了 TOTP";
+        qInfo().noquote() << "Using TOTP";
     }
     if (profile.endpoint.protocol == "easyconnect"
         && !profile.credentials.certFile.isEmpty())
     {
-        qInfo().noquote() << "使用了证书文件";
+        qInfo().noquote() << "Using a certificate file";
     }
 
     QString programToStart = profile.program;

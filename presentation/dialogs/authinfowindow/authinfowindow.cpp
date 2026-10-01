@@ -54,19 +54,19 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
     connect(proc_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
             [this](int exitCode, QProcess::ExitStatus exitStatus) {
                 QString output = ConsoleOutputDecoder::decode(stdoutBuf_);
-                qInfo().noquote() << "可用认证方式：\n" + output;
+                qInfo().noquote() << "Available authentication methods:\n" + output;
                 QJsonParseError jsonError;
                 QJsonDocument doc = QJsonDocument::fromJson(output.toUtf8(), &jsonError);
                 if (jsonError.error != QJsonParseError::NoError)
                 {
-                    qWarning().noquote() << "解析可用认证方式失败：" + jsonError.errorString();
-                    ui->label->setText("获取认证方式失败，请检查服务器信息后重试。");
+                    qWarning().noquote() << "Failed to parse authentication methods: " + jsonError.errorString();
+                    ui->label->setText("Failed to fetch authentication methods. Check the server details and try again.");
                     return;
                 }
                 if (!doc.isArray())
                 {
-                    qWarning().noquote() << "解析可用认证方式失败：可用认证方式不是列表";
-                    ui->label->setText("服务器没有返回有效的认证方式列表。");
+                    qWarning().noquote() << "Failed to parse authentication methods: the response is not a list";
+                    ui->label->setText("The server did not return a valid list of authentication methods.");
                     return;
                 }
                 QJsonArray arr = doc.array();
@@ -77,7 +77,7 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
                     QString loginDomain = obj.value("loginDomain").toString();
                     QString loginUrl = obj.value("loginUrl").toString();
                     QListWidgetItem *item =
-                        new QListWidgetItem(QString("%1 - %2 - %3 - %4").arg(authName, authType, loginDomain, loginUrl.isEmpty()? "无" : loginUrl));
+                        new QListWidgetItem(QString("%1 - %2 - %3 - %4").arg(authName, authType, loginDomain, loginUrl.isEmpty()? "none" : loginUrl));
                     item->setData(Qt::UserRole, authType);
                     item->setData(Qt::UserRole + 1, loginDomain);
                     item->setData(Qt::UserRole + 2, loginUrl);
@@ -85,15 +85,15 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
                 }
                 ui->label->setText(
                     arr.isEmpty()
-                        ? "服务器没有返回可用的认证方式。"
-                        : "请选择可用的认证方式："
+                        ? "The server returned no authentication methods."
+                        : "Choose an authentication method:"
                 );
             });
     connect(proc_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         qWarning().noquote()
-            << QString("获取可用认证方式失败：")
+            << QString("Failed to fetch authentication methods: ")
                    + QMetaEnum::fromType<QProcess::ProcessError>().valueToKey(error);
-        ui->label->setText("获取认证方式失败，请检查核心程序和服务器信息。");
+        ui->label->setText("Failed to fetch authentication methods. Check the core executable and the server details.");
     });
 }
 
@@ -108,8 +108,8 @@ void AuthInfoWindow::fetchAuthInfo(const QString& serverAddress, int port)
     stderrBuf_.clear();
     ui->authInfoListWidget->clear();
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-    ui->label->setText("正在获取认证方式，请稍候...");
+    ui->label->setText("Fetching authentication methods, please wait...");
     proc_->start(CoreExecutable::path(),
                  {"-protocol", "atrust", "-server", serverAddress, "-port", QString::number(port), "-auth-info"});
-    qInfo().noquote() << "正在获取可用认证的方式...";
+    qInfo().noquote() << "Fetching available authentication methods...";
 }

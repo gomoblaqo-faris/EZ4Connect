@@ -42,7 +42,7 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     : QDialog(parent),
       sourceSettings(settings)
 {
-    setWindowTitle("配置引导");
+    setWindowTitle("Setup Guide");
     setWindowModality(Qt::WindowModal);
     setMinimumSize(520, 340);
 
@@ -70,8 +70,8 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     layout->addWidget(pages, 1);
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    backButton = buttonBox->addButton("上一步", QDialogButtonBox::ActionRole);
-    nextButton = buttonBox->addButton("下一步", QDialogButtonBox::AcceptRole);
+    backButton = buttonBox->addButton("Back", QDialogButtonBox::ActionRole);
+    nextButton = buttonBox->addButton("Next", QDialogButtonBox::AcceptRole);
     layout->addWidget(buttonBox);
 
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -207,18 +207,18 @@ QWidget *ConfigurationGuideDialog::createServerPage()
     formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     serverAddressLineEdit = new QLineEdit(page);
-    serverAddressLineEdit->setPlaceholderText("例如：vpn.example.edu.cn");
+    serverAddressLineEdit->setPlaceholderText("e.g. vpn.example.edu.cn");
     serverAddressLineEdit->setText(
         sourceSettings->value("ZJUConnect/ServerAddress").toString()
     );
-    formLayout->addRow("服务器地址", serverAddressLineEdit);
+    formLayout->addRow("Server address", serverAddressLineEdit);
 
     serverPortSpinBox = new QSpinBox(page);
     serverPortSpinBox->setRange(1, 65535);
     serverPortSpinBox->setValue(
         sourceSettings->value("ZJUConnect/ServerPort", 443).toInt()
     );
-    formLayout->addRow("服务器端口", serverPortSpinBox);
+    formLayout->addRow("Server port", serverPortSpinBox);
 
     pageLayout->addLayout(formLayout);
     pageLayout->addStretch();
@@ -230,19 +230,19 @@ QWidget *ConfigurationGuideDialog::createProtocolPage()
     auto *page = new QWidget(this);
     auto *pageLayout = new QVBoxLayout(page);
 
-    auto *protocolGroup = new QGroupBox("服务器协议", page);
+    auto *protocolGroup = new QGroupBox("Server Protocol", page);
     auto *protocolLayout = new QVBoxLayout(protocolGroup);
 
     atrustRadioButton = new QRadioButton("aTrust", protocolGroup);
     auto *atrustDescription = new QLabel(
-        "适用于新版深信服 aTrust 服务器，可从服务器获取认证方式。",
+        "For newer Sangfor aTrust servers. Authentication methods can be fetched from the server.",
         protocolGroup
     );
     atrustDescription->setWordWrap(true);
 
     easyconnectRadioButton = new QRadioButton("EasyConnect", protocolGroup);
     auto *easyconnectDescription = new QLabel(
-        "适用于传统 EasyConnect 服务器。",
+        "For legacy EasyConnect servers.",
         protocolGroup
     );
     easyconnectDescription->setWordWrap(true);
@@ -275,13 +275,13 @@ QWidget *ConfigurationGuideDialog::createAuthenticationPage()
     auto *atrustPage = new QWidget(authenticationPages);
     auto *atrustLayout = new QVBoxLayout(atrustPage);
     auto *atrustInfo = new QLabel(
-        "从服务器读取可用的认证方式，然后选择与你的账号相符的一项。",
+        "Fetch the available authentication methods from the server, then choose the one that matches your account.",
         atrustPage
     );
     atrustInfo->setWordWrap(true);
     selectedAuthenticationLabel = new QLabel(atrustPage);
     selectedAuthenticationLabel->setWordWrap(true);
-    fetchAuthenticationButton = new QPushButton("获取认证方式", atrustPage);
+    fetchAuthenticationButton = new QPushButton("Fetch Authentication Methods", atrustPage);
     atrustLayout->addWidget(atrustInfo);
     atrustLayout->addWidget(selectedAuthenticationLabel);
     atrustLayout->addWidget(fetchAuthenticationButton, 0, Qt::AlignLeft);
@@ -291,15 +291,15 @@ QWidget *ConfigurationGuideDialog::createAuthenticationPage()
     auto *easyconnectPage = new QWidget(authenticationPages);
     auto *easyconnectLayout = new QVBoxLayout(easyconnectPage);
     passwordAuthenticationRadioButton = new QRadioButton(
-        "用户名和密码",
+        "Username and password",
         easyconnectPage
     );
     certificateAuthenticationRadioButton = new QRadioButton(
-        "证书",
+        "Certificate",
         easyconnectPage
     );
     auto *certificateHint = new QLabel(
-        "选择证书认证后，下一步填写证书文件和密码。",
+        "With certificate authentication, the next step asks for the certificate file and password.",
         easyconnectPage
     );
     certificateHint->setWordWrap(true);
@@ -335,14 +335,14 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
 
     auto *passwordPage = new QWidget(credentialPages);
     auto *passwordPageLayout = new QVBoxLayout(passwordPage);
-    auto *passwordGroup = new QGroupBox("账号凭据", passwordPage);
+    auto *passwordGroup = new QGroupBox("Account Credentials", passwordPage);
     auto *passwordForm = new QFormLayout(passwordGroup);
     passwordForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     usernameLineEdit = new QLineEdit(passwordGroup);
     usernameLineEdit->setObjectName("guideUsernameLineEdit");
-    usernameLineEdit->setPlaceholderText("VPN 账号");
-    passwordForm->addRow("账号", usernameLineEdit);
+    usernameLineEdit->setPlaceholderText("VPN account");
+    passwordForm->addRow("Account", usernameLineEdit);
 
     auto *passwordRow = new QWidget(passwordGroup);
     auto *passwordRowLayout = new QHBoxLayout(passwordRow);
@@ -350,11 +350,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     passwordLineEdit = new QLineEdit(passwordRow);
     passwordLineEdit->setObjectName("guidePasswordLineEdit");
     passwordLineEdit->setEchoMode(QLineEdit::Password);
-    passwordLineEdit->setPlaceholderText("VPN 密码");
-    auto *showPasswordCheckBox = new QCheckBox("显示", passwordRow);
+    passwordLineEdit->setPlaceholderText("VPN password");
+    auto *showPasswordCheckBox = new QCheckBox("Show", passwordRow);
     passwordRowLayout->addWidget(passwordLineEdit, 1);
     passwordRowLayout->addWidget(showPasswordCheckBox);
-    passwordForm->addRow("密码", passwordRow);
+    passwordForm->addRow("Password", passwordRow);
 
     auto *totpRow = new QWidget(passwordGroup);
     auto *totpRowLayout = new QHBoxLayout(totpRow);
@@ -362,11 +362,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     totpSecretLineEdit = new QLineEdit(totpRow);
     totpSecretLineEdit->setObjectName("guideTotpSecretLineEdit");
     totpSecretLineEdit->setEchoMode(QLineEdit::Password);
-    totpSecretLineEdit->setPlaceholderText("可选，TOTP 验证器密钥");
-    auto *showTotpCheckBox = new QCheckBox("显示", totpRow);
+    totpSecretLineEdit->setPlaceholderText("Optional: TOTP authenticator secret");
+    auto *showTotpCheckBox = new QCheckBox("Show", totpRow);
     totpRowLayout->addWidget(totpSecretLineEdit, 1);
     totpRowLayout->addWidget(showTotpCheckBox);
-    passwordForm->addRow("TOTP 密钥", totpRow);
+    passwordForm->addRow("TOTP secret", totpRow);
 
     passwordPageLayout->addWidget(passwordGroup);
     passwordPageLayout->addStretch();
@@ -374,7 +374,7 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
 
     auto *phonePage = new QWidget(credentialPages);
     auto *phonePageLayout = new QVBoxLayout(phonePage);
-    auto *phoneGroup = new QGroupBox("短信验证手机号", phonePage);
+    auto *phoneGroup = new QGroupBox("Phone Number for SMS Verification", phonePage);
     auto *phoneForm = new QFormLayout(phoneGroup);
     phoneForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
     auto *phoneRow = new QWidget(phoneGroup);
@@ -390,7 +390,7 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     ));
     phoneNumberLineEdit = new QLineEdit(phoneRow);
     phoneNumberLineEdit->setObjectName("guidePhoneNumberLineEdit");
-    phoneNumberLineEdit->setPlaceholderText("手机号码");
+    phoneNumberLineEdit->setPlaceholderText("Phone number");
     phoneNumberLineEdit->setValidator(new QRegularExpressionValidator(
         QRegularExpression("[0-9]{1,20}"),
         phoneNumberLineEdit
@@ -398,14 +398,14 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     phoneRowLayout->addWidget(new QLabel("+", phoneRow));
     phoneRowLayout->addWidget(countryCodeLineEdit);
     phoneRowLayout->addWidget(phoneNumberLineEdit, 1);
-    phoneForm->addRow("手机号", phoneRow);
+    phoneForm->addRow("Phone", phoneRow);
     phonePageLayout->addWidget(phoneGroup);
     phonePageLayout->addStretch();
     credentialPages->addWidget(phonePage);
 
     auto *certificatePage = new QWidget(credentialPages);
     auto *certificatePageLayout = new QVBoxLayout(certificatePage);
-    auto *certificateGroup = new QGroupBox("证书凭据", certificatePage);
+    auto *certificateGroup = new QGroupBox("Certificate Credentials", certificatePage);
     auto *certificateForm = new QFormLayout(certificateGroup);
     certificateForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
@@ -414,14 +414,14 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     certificateFileRowLayout->setContentsMargins(0, 0, 0, 0);
     certificateFileLineEdit = new QLineEdit(certificateFileRow);
     certificateFileLineEdit->setObjectName("guideCertificateFileLineEdit");
-    certificateFileLineEdit->setPlaceholderText("P12 或 PFX 证书文件");
+    certificateFileLineEdit->setPlaceholderText("P12 or PFX certificate file");
     auto *browseCertificateButton = new QPushButton(
-        "浏览...",
+        "Browse...",
         certificateFileRow
     );
     certificateFileRowLayout->addWidget(certificateFileLineEdit, 1);
     certificateFileRowLayout->addWidget(browseCertificateButton);
-    certificateForm->addRow("证书文件", certificateFileRow);
+    certificateForm->addRow("Certificate file", certificateFileRow);
 
     auto *certificatePasswordRow = new QWidget(certificateGroup);
     auto *certificatePasswordRowLayout = new QHBoxLayout(
@@ -433,14 +433,14 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
         "guideCertificatePasswordLineEdit"
     );
     certificatePasswordLineEdit->setEchoMode(QLineEdit::Password);
-    certificatePasswordLineEdit->setPlaceholderText("可选，证书密码");
+    certificatePasswordLineEdit->setPlaceholderText("Optional: certificate password");
     auto *showCertificatePasswordCheckBox = new QCheckBox(
-        "显示",
+        "Show",
         certificatePasswordRow
     );
     certificatePasswordRowLayout->addWidget(certificatePasswordLineEdit, 1);
     certificatePasswordRowLayout->addWidget(showCertificatePasswordCheckBox);
-    certificateForm->addRow("证书密码", certificatePasswordRow);
+    certificateForm->addRow("Certificate password", certificatePasswordRow);
 
     auto *certificateTotpRow = new QWidget(certificateGroup);
     auto *certificateTotpRowLayout = new QHBoxLayout(certificateTotpRow);
@@ -451,15 +451,15 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     );
     certificateTotpSecretLineEdit->setEchoMode(QLineEdit::Password);
     certificateTotpSecretLineEdit->setPlaceholderText(
-        "可选，TOTP 验证器密钥"
+        "Optional: TOTP authenticator secret"
     );
     auto *showCertificateTotpCheckBox = new QCheckBox(
-        "显示",
+        "Show",
         certificateTotpRow
     );
     certificateTotpRowLayout->addWidget(certificateTotpSecretLineEdit, 1);
     certificateTotpRowLayout->addWidget(showCertificateTotpCheckBox);
-    certificateForm->addRow("TOTP 密钥", certificateTotpRow);
+    certificateForm->addRow("TOTP secret", certificateTotpRow);
     certificatePageLayout->addWidget(certificateGroup);
     certificatePageLayout->addStretch();
     credentialPages->addWidget(certificatePage);
@@ -467,7 +467,7 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     auto *ssoPage = new QWidget(credentialPages);
     auto *ssoPageLayout = new QVBoxLayout(ssoPage);
     auto *ssoLabel = new QLabel(
-        "此认证方式将在连接时打开登录页面，无需提前填写登录凭据。",
+        "This method opens a login page when connecting, so no credentials are needed in advance.",
         ssoPage
     );
     ssoLabel->setWordWrap(true);
@@ -595,7 +595,7 @@ void ConfigurationGuideDialog::browseCertificateFile()
 {
     const QString fileName = QFileDialog::getOpenFileName(
         this,
-        "选择证书文件",
+        "Choose a Certificate File",
         QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
         "P12 Certificate (*.p12 *.pfx);;All Files (*)"
     );
@@ -627,7 +627,7 @@ bool ConfigurationGuideDialog::validateCurrentPage()
     {
         if (serverAddressLineEdit->text().trimmed().isEmpty())
         {
-            QMessageBox::warning(this, "服务器地址无效", "服务器地址不能为空。");
+            QMessageBox::warning(this, "Invalid Server Address", "The server address is required.");
             return false;
         }
     }
@@ -637,8 +637,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "尚未选择认证方式",
-                "请先获取并选择服务器支持的认证方式。"
+                "No Authentication Method Selected",
+                "Fetch and choose an authentication method supported by the server first."
             );
             return false;
         }
@@ -651,8 +651,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "登录凭据不完整",
-                "请填写 VPN 账号和密码。"
+                "Incomplete Credentials",
+                "Enter the VPN account and password."
             );
             return false;
         }
@@ -662,8 +662,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "手机号不完整",
-                "请填写国家代码和手机号码。"
+                "Incomplete Phone Number",
+                "Enter the country code and phone number."
             );
             return false;
         }
@@ -672,8 +672,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "尚未选择证书",
-                "请选择用于登录的 P12 或 PFX 证书文件。"
+                "No Certificate Selected",
+                "Choose the P12 or PFX certificate file used to log in."
             );
             return false;
         }
@@ -684,27 +684,27 @@ bool ConfigurationGuideDialog::validateCurrentPage()
 void ConfigurationGuideDialog::updateNavigation()
 {
     static const QStringList titles{
-        "选择协议",
-        "配置服务器",
-        "选择认证方式",
-        "配置登录凭据"
+        "Choose Protocol",
+        "Configure Server",
+        "Choose Authentication Method",
+        "Enter Credentials"
     };
     static const QStringList descriptions{
-        "选择服务器实际使用的接入协议。",
-        "填写 VPN 服务器提供方给出的地址和端口。",
-        "选择服务器为你的账号提供的认证方式。",
-        "填写当前认证方式连接时需要的登录信息。"
+        "Choose the access protocol your server actually uses.",
+        "Enter the address and port given by your VPN provider.",
+        "Choose the authentication method the server offers for your account.",
+        "Enter the login details this authentication method needs when connecting."
     };
 
     const int pageIndex = pages->currentIndex();
     stepLabel->setText(
-        QString("步骤 %1 / %2").arg(pageIndex + 1).arg(pages->count())
+        QString("Step %1 / %2").arg(pageIndex + 1).arg(pages->count())
     );
     titleLabel->setText(titles.value(pageIndex));
     descriptionLabel->setText(descriptions.value(pageIndex));
     backButton->setEnabled(pageIndex > 0);
     nextButton->setText(
-        pageIndex == pages->count() - 1 ? "保存" : "下一步"
+        pageIndex == pages->count() - 1 ? "Save" : "Next"
     );
     updateProtocolPage();
 }
@@ -719,13 +719,13 @@ void ConfigurationGuideDialog::selectAuthenticationMethod(
     selectedLoginDomain = loginDomain;
     selectedLoginUrl = loginUrl;
 
-    QString details = "当前选择：" + authenticationMethodName(selectedAuthType);
+    QString details = "Selected: " + authenticationMethodName(selectedAuthType);
     if (!selectedLoginDomain.isEmpty())
     {
-        details += "\n登录域：" + selectedLoginDomain;
+        details += "\nLogin domain: " + selectedLoginDomain;
     }
     selectedAuthenticationLabel->setText(details);
-    fetchAuthenticationButton->setText("重新获取认证方式");
+    fetchAuthenticationButton->setText("Fetch Authentication Methods Again");
     updateCredentialsPage();
 }
 
@@ -735,11 +735,11 @@ QString ConfigurationGuideDialog::authenticationMethodName(
 {
     if (authType == "psw")
     {
-        return "用户名和密码";
+        return "Username and password";
     }
     if (authType == "smsCheckCode")
     {
-        return "短信验证码";
+        return "SMS code";
     }
     if (authType == "cas")
     {
@@ -749,5 +749,5 @@ QString ConfigurationGuideDialog::authenticationMethodName(
     {
         return "OAuth2";
     }
-    return authType.isEmpty() ? "尚未选择" : authType;
+    return authType.isEmpty() ? "Not selected" : authType;
 }

@@ -18,7 +18,7 @@ void DeviceTrust::set(
 {
     if (protocol != "atrust")
     {
-        throw std::runtime_error("授信设备功能仅支持 aTrust");
+        throw std::runtime_error("Trusted devices are only supported with aTrust");
     }
 
     QStringList arguments;
@@ -41,11 +41,11 @@ void DeviceTrust::set(
     process.start(CoreExecutable::path(), arguments);
     if (!process.waitForStarted())
     {
-        throw std::runtime_error("核心无法启动");
+        throw std::runtime_error("Failed to start the core");
     }
     if (!process.waitForFinished())
     {
-        throw std::runtime_error("核心运行超时");
+        throw std::runtime_error("The core timed out");
     }
 
     const QByteArray errorOutput = process.readAllStandardError();

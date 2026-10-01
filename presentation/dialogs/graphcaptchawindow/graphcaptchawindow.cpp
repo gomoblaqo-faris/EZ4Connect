@@ -52,7 +52,7 @@ void GraphCaptchaWindow::accept()
 {
     if (ui->canvas->image().isNull())
     {
-        QMessageBox::warning(this, "图形验证码", "验证码图片加载失败，请重试连接。");
+        QMessageBox::warning(this, "Captcha", "The captcha image failed to load. Please try connecting again.");
         return;
     }
 
@@ -61,7 +61,7 @@ void GraphCaptchaWindow::accept()
         const QString code = ui->codeEdit->text().trimmed();
         if (code.isEmpty())
         {
-            QMessageBox::warning(this, "图形验证码", "请输入图片中的字符验证码。");
+            QMessageBox::warning(this, "Captcha", "Enter the characters shown in the image.");
             ui->codeEdit->setFocus();
             return;
         }

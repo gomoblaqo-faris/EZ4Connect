@@ -17,20 +17,20 @@
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
-      <string>需要 root 权限</string>
+      <string>Root Privileges Required</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="2" column="2">
        <widget class="QCheckBox" name="passwordVisibleCheckBox">
         <property name="text">
-         <string>显示密码</string>
+         <string>Show password</string>
         </property>
        </widget>
       </item>
       <item row="2" column="1">
        <widget class="QCheckBox" name="savePasswordCheckBox">
         <property name="text">
-         <string>本次会话内保存</string>
+         <string>Remember for this session</string>
         </property>
        </widget>
       </item>
@@ -57,7 +57,7 @@
       <item row="0" column="0" colspan="3">
        <widget class="QLabel" name="label2">
         <property name="text">
-         <string>请输入 sudo 密码：</string>
+         <string>Enter your sudo password:</string>
         </property>
        </widget>
       </item>

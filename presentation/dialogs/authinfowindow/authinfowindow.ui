@@ -11,13 +11,13 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>认证方式</string>
+   <string>Authentication Method</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>可用的认证方式：</string>
+      <string>Available authentication methods:</string>
      </property>
     </widget>
    </item>

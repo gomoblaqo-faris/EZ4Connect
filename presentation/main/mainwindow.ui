@@ -80,7 +80,7 @@
           <item>
            <widget class="QLabel" name="versionLabel">
             <property name="text">
-             <string>版本 dev</string>
+             <string>Version dev</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -105,7 +105,7 @@
         <item>
          <widget class="QLabel" name="applicationSubtitleLabel">
           <property name="text">
-           <string>支持 aTrust 与 EasyConnect 协议</string>
+           <string>Supports aTrust and EasyConnect</string>
           </property>
          </widget>
         </item>
@@ -127,20 +127,20 @@
       <item>
        <widget class="QPushButton" name="guidePushButton">
         <property name="toolTip">
-         <string>打开配置引导</string>
+         <string>Open the Setup Guide</string>
         </property>
         <property name="text">
-         <string>配置引导</string>
+         <string>Setup Guide</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="settingPushButton">
         <property name="toolTip">
-         <string>打开完整设置</string>
+         <string>Open the full settings</string>
         </property>
         <property name="text">
-         <string>设置</string>
+         <string>Settings</string>
         </property>
        </widget>
       </item>
@@ -187,7 +187,7 @@
          <item>
           <widget class="QLabel" name="connectionEyebrowLabel">
            <property name="text">
-            <string>VPN 连接</string>
+            <string>VPN Connection</string>
            </property>
           </widget>
          </item>
@@ -218,7 +218,7 @@
            <item>
             <widget class="QLabel" name="statusTitleLabel">
              <property name="text">
-              <string>尚未连接</string>
+              <string>Not Connected</string>
              </property>
             </widget>
            </item>
@@ -240,7 +240,7 @@
          <item>
           <widget class="QLabel" name="statusDetailLabel">
            <property name="text">
-            <string>连接后即可访问网络资源。</string>
+            <string>Connect to access network resources.</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -256,7 +256,7 @@
             </size>
            </property>
            <property name="text">
-            <string>连接服务器</string>
+            <string>Connect</string>
            </property>
            <property name="default">
             <bool>true</bool>
@@ -272,7 +272,7 @@
             </size>
            </property>
            <property name="text">
-            <string>设置系统代理</string>
+            <string>Set System Proxy</string>
            </property>
           </widget>
          </item>
@@ -289,21 +289,21 @@
          <item>
           <widget class="QLabel" name="profileEyebrowLabel">
            <property name="text">
-            <string>当前配置</string>
+            <string>Current Profile</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QLabel" name="profileNameLabel">
            <property name="text">
-            <string>默认</string>
+            <string>Default</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QLabel" name="profileDetailLabel">
            <property name="text">
-            <string>EasyConnect · 等待连接</string>
+            <string>EasyConnect · Waiting to connect</string>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -326,7 +326,7 @@
          <item>
           <widget class="QLabel" name="qqGroupLabel">
            <property name="text">
-            <string>如遇问题加 QQ 群反馈：1037726410</string>
+            <string>Need help? Join QQ group 1037726410</string>
            </property>
           </widget>
          </item>
@@ -367,14 +367,14 @@
              <item>
               <widget class="QLabel" name="logTitleLabel">
                <property name="text">
-                <string>运行日志</string>
+                <string>Log</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLabel" name="logSubtitleLabel">
                <property name="text">
-                <string>连接过程与诊断信息</string>
+                <string>Connection progress and diagnostics</string>
                </property>
               </widget>
              </item>
@@ -396,30 +396,30 @@
            <item>
             <widget class="QPushButton" name="openLogPushButton">
              <property name="toolTip">
-              <string>在系统中打开完整日志文件</string>
+              <string>Open the full log file</string>
              </property>
              <property name="text">
-              <string>打开日志文件</string>
+              <string>Open Log File</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QPushButton" name="copyLogPushButton">
              <property name="toolTip">
-              <string>复制日志到剪贴板</string>
+              <string>Copy the log to the clipboard</string>
              </property>
              <property name="text">
-              <string>复制</string>
+              <string>Copy</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QPushButton" name="clearLogPushButton">
              <property name="toolTip">
-              <string>清空窗口中的日志</string>
+              <string>Clear the log shown in this window</string>
              </property>
              <property name="text">
-              <string>清空</string>
+              <string>Clear</string>
              </property>
             </widget>
            </item>
@@ -434,7 +434,7 @@
             <number>1000</number>
            </property>
            <property name="placeholderText">
-            <string>连接日志将在这里显示</string>
+            <string>The connection log will appear here</string>
            </property>
           </widget>
          </item>
@@ -456,7 +456,7 @@
    </property>
    <widget class="QMenu" name="fileMenu">
     <property name="title">
-     <string>文件</string>
+     <string>File</string>
     </property>
     <addaction name="disableProxyAction"/>
     <addaction name="clearClientDataAction"/>
@@ -470,13 +470,13 @@
    </widget>
    <widget class="QMenu" name="profileMenu">
     <property name="title">
-     <string>配置</string>
+     <string>Profile</string>
     </property>
     <addaction name="configurationGuideAction"/>
    </widget>
    <widget class="QMenu" name="helpMenu">
     <property name="title">
-     <string>帮助</string>
+     <string>Help</string>
     </property>
     <addaction name="checkUpdateAction"/>
     <addaction name="projectAction"/>
@@ -488,7 +488,7 @@
   </widget>
   <action name="aboutAction">
    <property name="text">
-    <string>关于本软件</string>
+    <string>About</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::AboutRole</enum>
@@ -496,7 +496,7 @@
   </action>
   <action name="exitAction">
    <property name="text">
-    <string>退出</string>
+    <string>Quit</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::QuitRole</enum>
@@ -504,7 +504,7 @@
   </action>
   <action name="settingAction">
    <property name="text">
-    <string>设置</string>
+    <string>Settings</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::PreferencesRole</enum>
@@ -512,7 +512,7 @@
   </action>
   <action name="configurationGuideAction">
    <property name="text">
-    <string>配置引导</string>
+    <string>Setup Guide</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
@@ -520,35 +520,35 @@
   </action>
   <action name="disableProxyAction">
    <property name="text">
-    <string>清理系统代理</string>
+    <string>Clear System Proxy</string>
    </property>
   </action>
   <action name="checkUpdateAction">
    <property name="text">
-    <string>检查更新</string>
+    <string>Check for Updates</string>
    </property>
   </action>
   <action name="projectAction">
    <property name="text">
-    <string>项目主页</string>
+    <string>Project Homepage</string>
    </property>
   </action>
   <action name="openLogAction">
    <property name="text">
-    <string>打开日志文件</string>
+    <string>Open Log File</string>
    </property>
    <property name="toolTip">
-    <string>打开应用日志文件</string>
+    <string>Open the application log file</string>
    </property>
   </action>
   <action name="clearClientDataAction">
    <property name="text">
-    <string>清理登录缓存</string>
+    <string>Clear Login Cache</string>
    </property>
   </action>
   <action name="trustDeviceAction">
    <property name="text">
-    <string>设置授信设备</string>
+    <string>Trust This Device</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>
@@ -556,7 +556,7 @@
   </action>
   <action name="untrustDeviceAction">
    <property name="text">
-    <string>取消授信设备</string>
+    <string>Untrust This Device</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::NoRole</enum>

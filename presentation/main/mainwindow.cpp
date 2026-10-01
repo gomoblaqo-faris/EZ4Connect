@@ -38,7 +38,7 @@ bool appendStyleSheet(const QString &path, QString &styleSheet)
     QFile styleFile(path);
     if (!styleFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        qWarning().noquote() << "无法加载样式资源：" << path;
+        qWarning().noquote() << "Failed to load style resource:" << path;
         return false;
     }
 
@@ -91,19 +91,19 @@ MainWindow::MainWindow(
             [this](UpdateComponent component, const QString &)
             {
                 const QString componentName =
-                    component == UpdateComponent::Ui ? QStringLiteral("UI") : QStringLiteral("核心");
+                    component == UpdateComponent::Ui ? QStringLiteral("UI") : QStringLiteral("core");
                 ui->versionLabel->setToolTip(
                     ui->versionLabel->toolTip()
-                    + "\n检查" + componentName + "更新失败"
+                    + "\nFailed to check for " + componentName + " updates"
                 );
             });
     connect(updateChecker, &UpdateChecker::uiUpdateAvailable, this,
             [this](const QString &latestVersion)
             {
                 QMessageBox msgBox(this);
-                msgBox.setText("UI 版本更新");
+                msgBox.setText("UI Update Available");
                 msgBox.setInformativeText(
-                    "存在 UI 版本更新：" + latestVersion + "\n是否前往 Github 发布页面查看？"
+                    "A UI update is available: " + latestVersion + "\nOpen the GitHub releases page?"
                 );
                 msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
                 msgBox.setDefaultButton(QMessageBox::Ok);
@@ -133,7 +133,7 @@ MainWindow::MainWindow(
     connect(systemProxySession, &SystemProxySession::enabledChanged, this,
             [this](bool enabled)
             {
-                ui->pushButton2->setText(enabled ? "清除系统代理" : "设置系统代理");
+                ui->pushButton2->setText(enabled ? "Clear System Proxy" : "Set System Proxy");
                 if (!enabled && connectionSession != nullptr && !connectionSession->isActive())
                 {
                     ui->pushButton2->hide();
@@ -188,7 +188,7 @@ MainWindow::MainWindow(
                 }
                 else
                 {
-                    QMessageBox::warning(this, "日志文件", "日志文件创建失败。");
+                    QMessageBox::warning(this, "Log File", "The log file could not be created.");
                 }
             });
 
@@ -197,11 +197,11 @@ MainWindow::MainWindow(
             [&]()
             {
                 QMessageBox messageBox(this);
-                messageBox.setWindowTitle("清理系统代理");
-                messageBox.setText("是否清理系统代理？");
+                messageBox.setWindowTitle("Clear System Proxy");
+                messageBox.setText("Clear the system proxy?");
 
-                messageBox.addButton(QMessageBox::Yes)->setText("是");
-                messageBox.addButton(QMessageBox::No)->setText("否");
+                messageBox.addButton(QMessageBox::Yes)->setText("Yes");
+                messageBox.addButton(QMessageBox::No)->setText("No");
                 messageBox.setDefaultButton(QMessageBox::Yes);
 
                 if (messageBox.exec() == QMessageBox::No)
@@ -214,7 +214,7 @@ MainWindow::MainWindow(
                         {
                             if (!enabled)
                             {
-                                qInfo().noquote() << "已清理系统代理设置";
+                                qInfo().noquote() << "System proxy settings cleared";
                             }
                         },
                         Qt::SingleShotConnection);
@@ -226,11 +226,11 @@ MainWindow::MainWindow(
             [&]()
             {
                 QMessageBox messageBox(this);
-                messageBox.setWindowTitle("清理登录缓存");
-                messageBox.setText("是否清理登录缓存？");
+                messageBox.setWindowTitle("Clear Login Cache");
+                messageBox.setText("Clear the login cache?");
 
-                messageBox.addButton(QMessageBox::Yes)->setText("是");
-                messageBox.addButton(QMessageBox::No)->setText("否");
+                messageBox.addButton(QMessageBox::Yes)->setText("Yes");
+                messageBox.addButton(QMessageBox::No)->setText("No");
                 messageBox.setDefaultButton(QMessageBox::Yes);
 
                 if (messageBox.exec() == QMessageBox::No)
@@ -239,7 +239,7 @@ MainWindow::MainWindow(
                 }
 
                 ApplicationPaths::clearClientData(currentProfileId);
-                qInfo().noquote() << "已清理登录缓存";
+                qInfo().noquote() << "Login cache cleared";
             });
 
     // 文件-设置授信设备
@@ -253,13 +253,13 @@ MainWindow::MainWindow(
                         settings->value("ZJUConnect/ServerAddress").toString(),
                         settings->value("ZJUConnect/ServerPort").toInt(),
                         currentProfileId, true);
-                    qInfo().noquote() << "设置授信设备成功";
-                    QMessageBox::information(this, "成功", "已设置授信设备");
+                    qInfo().noquote() << "Device trusted";
+                    QMessageBox::information(this, "Success", "This device is now trusted.");
                 }
                 catch (const std::runtime_error &e)
                 {
-                    qWarning().noquote() << "设置授信设备失败：" + QString(e.what());
-                    QMessageBox::critical(this, "错误", "设置授信设备失败：\n" + QString(e.what()));
+                    qWarning().noquote() << "Failed to trust this device: " + QString(e.what());
+                    QMessageBox::critical(this, "Error", "Failed to trust this device:\n" + QString(e.what()));
                 }
             });
 
@@ -274,13 +274,13 @@ MainWindow::MainWindow(
                         settings->value("ZJUConnect/ServerAddress").toString(),
                         settings->value("ZJUConnect/ServerPort").toInt(),
                         currentProfileId, false);
-                    qInfo().noquote() << "取消授信设备成功";
-                    QMessageBox::information(this, "成功", "已取消授信设备");
+                    qInfo().noquote() << "Device untrusted";
+                    QMessageBox::information(this, "Success", "This device is no longer trusted.");
                 }
                 catch (const std::runtime_error &e)
                 {
-                    qWarning().noquote() << "取消授信设备失败：" + QString(e.what());
-                    QMessageBox::critical(this, "错误", "取消授信设备失败：\n" + QString(e.what()));
+                    qWarning().noquote() << "Failed to untrust this device: " + QString(e.what());
+                    QMessageBox::critical(this, "Error", "Failed to untrust this device:\n" + QString(e.what()));
                 }
             });
 
@@ -384,7 +384,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     {
         event->ignore();
         hide();
-        showNotification("EZ4Connect", "程序已最小化到系统托盘，单击图标可恢复窗口。", QSystemTrayIcon::MessageIcon::Information);
+        showNotification("EZ4Connect", "Minimized to the system tray. Click the icon to restore the window.", QSystemTrayIcon::MessageIcon::Information);
     }
     else
     {
@@ -401,7 +401,7 @@ void MainWindow::changeEvent(QEvent *event)
         {
             event->ignore();
             hide();
-            showNotification("EZ4Connect", "程序已最小化到系统托盘，单击图标可恢复窗口。", QSystemTrayIcon::MessageIcon::Information);
+            showNotification("EZ4Connect", "Minimized to the system tray. Click the icon to restore the window.", QSystemTrayIcon::MessageIcon::Information);
         }
     }
     else
@@ -414,18 +414,18 @@ void MainWindow::clearLog()
 {
     ui->logPlainTextEdit->clear();
     ui->logPlainTextEdit->appendPlainText(
-        "欢迎使用 " + QApplication::applicationDisplayName() + "\n"
-        "当前版本：" + QApplication::applicationVersion() + "\n"
-        "系统版本：" + QSysInfo::prettyProductName() + "\n"
-        "当前配置：" + (currentProfileId.isEmpty() ? "默认" : currentProfileId) + "\n"
-        "配置路径：" + settings->fileName() + "\n");
+        "Welcome to " + QApplication::applicationDisplayName() + "\n"
+        "Version: " + QApplication::applicationVersion() + "\n"
+        "System: " + QSysInfo::prettyProductName() + "\n"
+        "Profile: " + (currentProfileId.isEmpty() ? "Default" : currentProfileId) + "\n"
+        "Profile path: " + settings->fileName() + "\n");
 }
 
 void MainWindow::resetZjuConnectUi()
 {
-    ui->pushButton1->setText("连接服务器");
-    trayConnectAction->setText("连接服务器");
-    ui->pushButton2->setText("设置系统代理");
+    ui->pushButton1->setText("Connect");
+    trayConnectAction->setText("Connect");
+    ui->pushButton2->setText("Set System Proxy");
     ui->pushButton2->hide();
     updateConnectionState(ConnectionState::Disconnected);
     updateProfileSummary();
@@ -457,40 +457,40 @@ void MainWindow::updateConnectionState(ConnectionState state)
     {
     case ConnectionState::Disconnected:
         propertyValue = "disconnected";
-        title = "尚未连接";
-        detail = "连接后即可访问网络资源。";
+        title = "Not Connected";
+        detail = "Connect to access network resources.";
         break;
     case ConnectionState::Starting:
         propertyValue = "starting";
-        title = "正在连接";
-        detail = "正在启动核心并建立安全通道。";
+        title = "Connecting";
+        detail = "Starting the core and establishing a secure tunnel.";
         break;
     case ConnectionState::Running:
         propertyValue = "running";
-        title = "已连接";
+        title = "Connected";
         detail = systemProxySession->isEnabled()
-            ? "VPN 通道与系统代理均已启用。"
-            : "VPN 通道运行中，可按需启用系统代理。";
+            ? "The VPN tunnel and the system proxy are both active."
+            : "The VPN tunnel is running. Enable the system proxy if you need it.";
         break;
     case ConnectionState::Stopping:
         propertyValue = "stopping";
-        title = "正在断开";
-        detail = "正在安全关闭当前连接。";
+        title = "Disconnecting";
+        detail = "Closing the current connection safely.";
         break;
     case ConnectionState::Reconnecting:
         propertyValue = "reconnecting";
-        title = "正在重连";
-        detail = "连接中断，正在按当前策略重新尝试。";
+        title = "Reconnecting";
+        detail = "Connection lost. Retrying according to the reconnect settings.";
         break;
     case ConnectionState::Interrupted:
         propertyValue = "failed";
-        title = "连接已断开";
-        detail = "VPN 核心意外退出，请查看右侧日志。";
+        title = "Disconnected";
+        detail = "The VPN core exited unexpectedly. See the log on the right.";
         break;
     case ConnectionState::Failed:
         propertyValue = "failed";
-        title = "连接失败";
-        detail = "请查看右侧日志，确认网络与账户配置。";
+        title = "Connection Failed";
+        detail = "See the log on the right and check your network and account settings.";
         break;
     }
 
@@ -513,7 +513,7 @@ void MainWindow::updateConnectionState(ConnectionState state)
 void MainWindow::updateProfileSummary()
 {
     const QString profileName = currentProfileId.isEmpty()
-        ? QStringLiteral("默认")
+        ? QStringLiteral("Default")
         : currentProfileId;
     const QString protocolSetting = settings->value(
         "ZJUConnect/Protocol",
@@ -528,7 +528,7 @@ void MainWindow::updateProfileSummary()
     ).toString().trimmed();
 
     QStringList details{protocol};
-    details.append(server.isEmpty() ? QStringLiteral("尚未配置服务器") : server);
+    details.append(server.isEmpty() ? QStringLiteral("No server configured") : server);
 
     ui->profileNameLabel->setText(profileName);
     ui->profileDetailLabel->setText(details.join(QStringLiteral(" · ")));
@@ -557,10 +557,11 @@ void MainWindow::setupTrayIcon()
         }
     });
 
-    trayConnectAction = new QAction("连接服务器", this);
-    trayProfileMenu = new QMenu("配置选择", this);
-    trayShowAction = new QAction("显示主界面", this);
-    trayCloseAction = new QAction("退出 " + QApplication::applicationName(), this);
+    trayConnectAction = new QAction("Connect", this);
+    trayProfileMenu = new QMenu("Profiles", this);
+    trayShowAction = new QAction("Show Main Window", this);
+    trayCloseAction = new QAction("Quit " + QApplication::applicationName(), this);
+    trayCloseAction->setMenuRole(QAction::NoRole);
     trayMenu = new QMenu(this);
     trayMenu->addAction(trayConnectAction);
     trayMenu->addSeparator();
@@ -583,9 +584,9 @@ void MainWindow::setupProfileMenu()
 {
     // 务必在 setupTrayIcon 之后调用，以确保 trayProfileMenu 已正确初始化
     ui->profileMenu->addSeparator();
-    newProfileAction = ui->profileMenu->addAction("新建配置");
-    renameProfileAction = ui->profileMenu->addAction("重命名当前配置");
-    deleteProfileAction = ui->profileMenu->addAction("删除当前配置");
+    newProfileAction = ui->profileMenu->addAction("New Profile");
+    renameProfileAction = ui->profileMenu->addAction("Rename Current Profile");
+    deleteProfileAction = ui->profileMenu->addAction("Delete Current Profile");
     ui->profileMenu->addSeparator();
 
     connect(
@@ -637,7 +638,7 @@ void MainWindow::refreshProfileMenu()
     }
 
     switchGroup->setExclusive(true);
-    QAction *action = ui->profileMenu->addAction("默认");
+    QAction *action = ui->profileMenu->addAction("Default");
     action->setCheckable(true);
     action->setChecked(currentProfileId.isEmpty());
     switchGroup->addAction(action);
@@ -647,7 +648,7 @@ void MainWindow::refreshProfileMenu()
     });
     if (trayProfileMenu != nullptr)
     {
-        QAction *trayAction = trayProfileMenu->addAction("默认");
+        QAction *trayAction = trayProfileMenu->addAction("Default");
         trayAction->setCheckable(true);
         trayAction->setChecked(currentProfileId.isEmpty());
         traySwitchGroup->addAction(trayAction);
@@ -704,7 +705,7 @@ bool MainWindow::switchProfile(const QString &profileId)
 
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "切换失败", "请先断开 VPN 连接，再切换配置。");
+        QMessageBox::warning(this, "Switch Failed", "Disconnect the VPN before switching profiles.");
         refreshProfileMenu();
         return false;
     }
@@ -729,7 +730,7 @@ bool MainWindow::switchProfile(const QString &profileId)
     clearLog();
     refreshProfileMenu();
 
-    qInfo().noquote() << "已切换到配置：" + currentProfileId;
+    qInfo().noquote() << "Switched to profile: " + currentProfileId;
     return true;
 }
 
@@ -737,15 +738,15 @@ void MainWindow::createProfile()
 {
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "新建失败", "请先断开 VPN 连接，再新建配置。");
+        QMessageBox::warning(this, "Cannot Create Profile", "Disconnect the VPN before creating a profile.");
         return;
     }
 
     bool ok = false;
     const QString name = QInputDialog::getText(
         this,
-        "新建配置",
-        "请输入配置名称：\n（仅支持字母、数字、下划线和连字符）",
+        "New Profile",
+        "Enter a profile name:\n(letters, digits, underscores and hyphens only)",
         QLineEdit::Normal,
         "",
         &ok
@@ -763,7 +764,7 @@ void MainWindow::createProfile()
     const QString newProfileId = profileService->createAndSwitch(name);
     if (newProfileId.isEmpty())
     {
-        QMessageBox::critical(this, "创建失败", "无法创建新配置。");
+        QMessageBox::critical(this, "Create Failed", "Could not create the profile.");
         return;
     }
 
@@ -778,8 +779,8 @@ void MainWindow::createProfile()
     refreshProfileMenu();
 
     promptConfigurationGuide(
-        "配置已创建",
-        "配置 \"" + newProfileId + "\" 已创建，是否现在使用配置引导完成设置？"
+        "Profile Created",
+        "Profile \"" + newProfileId + "\" was created. Finish setting it up with the Setup Guide now?"
     );
 }
 
@@ -789,8 +790,8 @@ void MainWindow::openConfigurationGuide()
     {
         QMessageBox::warning(
             this,
-            "无法修改配置",
-            "请先断开 VPN 连接，再使用配置引导。"
+            "Cannot Modify Profile",
+            "Disconnect the VPN before using the Setup Guide."
         );
         return;
     }
@@ -838,14 +839,14 @@ void MainWindow::openConfigurationGuide()
 
     resetZjuConnectUi();
     clearLog();
-    qInfo().noquote() << "已通过配置引导更新当前配置";
+    qInfo().noquote() << "Current profile updated via the Setup Guide";
 }
 
 void MainWindow::promptFirstLaunchGuide()
 {
     promptConfigurationGuide(
-        "欢迎使用 EZ4Connect",
-        "检测到这是首次启动，是否现在配置 VPN 服务器？"
+        "Welcome to EZ4Connect",
+        "This looks like the first launch. Set up a VPN server now?"
     );
 }
 
@@ -858,14 +859,14 @@ void MainWindow::promptConfigurationGuide(
     messageBox.setWindowTitle(windowTitle);
     messageBox.setText(text);
     messageBox.setInformativeText(
-        "配置引导将协助你选择协议、填写服务器地址、认证方式和登录凭据。"
+        "The Setup Guide helps you choose a protocol and enter the server address, authentication method and credentials."
     );
 
     QPushButton *startButton = messageBox.addButton(
-        "使用配置引导",
+        "Open Setup Guide",
         QMessageBox::AcceptRole
     );
-    messageBox.addButton("稍后配置", QMessageBox::RejectRole);
+    messageBox.addButton("Later", QMessageBox::RejectRole);
     messageBox.setDefaultButton(startButton);
     messageBox.exec();
 
@@ -878,7 +879,7 @@ void MainWindow::promptConfigurationGuide(
 void MainWindow::renameCurrentProfile()
 {
     bool ok = false;
-    QString name = QInputDialog::getText(this, "重命名配置", "请输入新配置名称：\n（仅支持字母、数字、下划线）", QLineEdit::Normal, currentProfileId, &ok);
+    QString name = QInputDialog::getText(this, "Rename Profile", "Enter a new profile name:\n(letters, digits, underscores and hyphens only)", QLineEdit::Normal, currentProfileId, &ok);
     if (!ok)
     {
         return;
@@ -887,7 +888,7 @@ void MainWindow::renameCurrentProfile()
     const QString normalizedName = profileService->normalizeProfileId(name);
     if (normalizedName.isEmpty())
     {
-        QMessageBox::warning(this, "重命名失败", "配置名称不能为空。");
+        QMessageBox::warning(this, "Rename Failed", "The profile name cannot be empty.");
         return;
     }
     if (normalizedName == currentProfileId)
@@ -896,7 +897,7 @@ void MainWindow::renameCurrentProfile()
     }
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "重命名失败", "请先断开 VPN 连接，再重命名配置。");
+        QMessageBox::warning(this, "Rename Failed", "Disconnect the VPN before renaming the profile.");
         return;
     }
 
@@ -906,7 +907,7 @@ void MainWindow::renameCurrentProfile()
     }
     if (!profileService->renameCurrent(normalizedName))
     {
-        QMessageBox::warning(this, "重命名失败", "目标配置已存在，或当前配置不可重命名。");
+        QMessageBox::warning(this, "Rename Failed", "A profile with that name already exists, or this profile cannot be renamed.");
         return;
     }
 
@@ -916,22 +917,22 @@ void MainWindow::renameCurrentProfile()
     updateVersionInfo();
     refreshProfileMenu();
     clearLog();
-    qInfo().noquote() << "当前配置已重命名为：" + currentProfileId;
+    qInfo().noquote() << "Current profile renamed to: " + currentProfileId;
 }
 
 void MainWindow::deleteCurrentProfile()
 {
     if (currentProfileId.isEmpty())
     {
-        QMessageBox::warning(this, "删除失败", "默认配置不可删除。");
+        QMessageBox::warning(this, "Delete Failed", "The default profile cannot be deleted.");
         return;
     }
 
     QMessageBox messageBox(this);
-    messageBox.setWindowTitle("删除配置");
-    messageBox.setText("确认删除当前配置 \"" + currentProfileId + "\" 吗？");
-    messageBox.addButton(QMessageBox::Yes)->setText("是");
-    messageBox.addButton(QMessageBox::No)->setText("否");
+    messageBox.setWindowTitle("Delete Profile");
+    messageBox.setText("Delete the current profile \"" + currentProfileId + "\"?");
+    messageBox.addButton(QMessageBox::Yes)->setText("Yes");
+    messageBox.addButton(QMessageBox::No)->setText("No");
     messageBox.setDefaultButton(QMessageBox::No);
     if (messageBox.exec() != QMessageBox::Yes)
     {
@@ -941,7 +942,7 @@ void MainWindow::deleteCurrentProfile()
     const QString removedProfileId = currentProfileId;
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "删除失败", "请先断开 VPN 连接，再删除配置。");
+        QMessageBox::warning(this, "Delete Failed", "Disconnect the VPN before deleting the profile.");
         return;
     }
     if (settingWindow != nullptr)
@@ -950,7 +951,7 @@ void MainWindow::deleteCurrentProfile()
     }
     if (!profileService->removeCurrentAndSwitchToDefault())
     {
-        QMessageBox::warning(this, "删除失败", "无法删除该配置文件。");
+        QMessageBox::warning(this, "Delete Failed", "Could not delete the profile file.");
         return;
     }
 
@@ -962,7 +963,7 @@ void MainWindow::deleteCurrentProfile()
     resetZjuConnectUi();
     clearLog();
     refreshProfileMenu();
-    qInfo().noquote() << "已删除配置：" + removedProfileId;
+    qInfo().noquote() << "Deleted profile: " + removedProfileId;
 }
 
 void MainWindow::upgradeSettings()
@@ -977,8 +978,8 @@ void MainWindow::upgradeSettings()
     else if (action == SettingsMigrationAction::RecommendReset)
     {
         QMessageBox msgBox;
-        msgBox.setText("存在配置更新");
-        msgBox.setInformativeText("建议恢复默认设置，以使用优化的配置。\n\n是否恢复默认设置？");
+        msgBox.setText("Configuration Format Updated");
+        msgBox.setInformativeText("Restoring the default settings is recommended to use the improved configuration.\n\nRestore the defaults?");
         msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
 
@@ -986,7 +987,7 @@ void MainWindow::upgradeSettings()
         SettingsMigrator::finish(*settings, reset);
         if (reset)
         {
-            QMessageBox::information(this, "完成", "已恢复默认设置。");
+            QMessageBox::information(this, "Done", "Default settings restored.");
         }
         return;
     }
@@ -996,10 +997,10 @@ void MainWindow::upgradeSettings()
 void MainWindow::updateVersionInfo()
 {
     const VersionInfo &versionInfo = updateChecker->versionInfo();
-    ui->versionLabel->setText("版本 " + versionInfo.uiVersion);
+    ui->versionLabel->setText("Version " + versionInfo.uiVersion);
     ui->versionLabel->setToolTip(
-        "UI 版本：" + versionInfo.uiVersion + "（最新：" + versionInfo.uiLatest + "）\n"
-        "核心版本：" + versionInfo.coreVersion + "（最新：" + versionInfo.coreLatest + "）"
+        "UI version: " + versionInfo.uiVersion + " (latest: " + versionInfo.uiLatest + ")\n"
+        "Core version: " + versionInfo.coreVersion + " (latest: " + versionInfo.coreLatest + ")"
     );
     updateProfileSummary();
 }

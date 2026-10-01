@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>图形验证码</string>
+   <string>Captcha</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -20,7 +20,7 @@
    <item>
     <widget class="QLabel" name="codeLabel">
      <property name="text">
-      <string>请输入图片中的字符验证码：</string>
+      <string>Enter the characters shown in the image:</string>
      </property>
     </widget>
    </item>

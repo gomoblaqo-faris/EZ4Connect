@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>设置</string>
+   <string>Settings</string>
   </property>
   <property name="styleSheet">
    <string notr="true"/>
@@ -30,7 +30,7 @@
      </property>
      <widget class="QWidget" name="generalTab">
       <attribute name="title">
-       <string>通用</string>
+       <string>General</string>
       </attribute>
       <layout class="QGridLayout">
        <item row="7" column="0">
@@ -49,35 +49,35 @@
        <item row="3" column="0" rowspan="2">
         <widget class="QGroupBox" name="profileGroup">
          <property name="title">
-          <string>配置文件</string>
+          <string>Configuration File</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
           <item row="1" column="1">
            <widget class="QPushButton" name="exportPushButton">
             <property name="text">
-             <string>导出</string>
+             <string>Export</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0" colspan="3">
            <widget class="QLabel" name="configVersionLabel">
             <property name="text">
-             <string>当前配置文件版本：？
-程序配置文件版本：？</string>
+             <string>Profile config version: ?
+App config version: ?</string>
             </property>
            </widget>
           </item>
           <item row="1" column="2">
            <widget class="QPushButton" name="resetDefaultPushButton">
             <property name="text">
-             <string>恢复默认</string>
+             <string>Restore Defaults</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
            <widget class="QPushButton" name="importPushButton">
             <property name="text">
-             <string>导入</string>
+             <string>Import</string>
             </property>
            </widget>
           </item>
@@ -87,7 +87,7 @@
        <item row="1" column="0">
         <widget class="QGroupBox" name="commonGroup">
          <property name="title">
-          <string>常规</string>
+          <string>Behavior</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_7">
           <item row="3" column="2">
@@ -114,14 +114,14 @@
           <item row="5" column="0">
            <widget class="QLabel" name="zjuConnectTabLabel7">
             <property name="text">
-             <string>自动重连（秒）</string>
+             <string>Auto-reconnect (s)</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="commonTabLable4">
             <property name="text">
-             <string>开机自启动</string>
+             <string>Launch at login</string>
             </property>
            </widget>
           </item>
@@ -151,35 +151,35 @@
           <item row="7" column="1" colspan="2">
            <widget class="QLineEdit" name="systemProxyBypassLineEdit">
             <property name="placeholderText">
-             <string>与操作系统有关，一般用半角分号;进行分隔</string>
+             <string>OS-dependent; usually separated by semicolons (;)</string>
             </property>
            </widget>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="commonTabLabelSilentStart">
             <property name="text">
-             <string>静默启动</string>
+             <string>Start hidden</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="commonTabLable5">
             <property name="text">
-             <string>自动连接</string>
+             <string>Connect on launch</string>
             </property>
            </widget>
           </item>
           <item row="7" column="0">
            <widget class="QLabel" name="zjuConnectTabLabel11">
             <property name="text">
-             <string>系统代理排除</string>
+             <string>System proxy bypass</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
            <widget class="QLabel" name="commonTabLable6">
             <property name="text">
-             <string>自动检查更新</string>
+             <string>Check for updates on launch</string>
             </property>
            </widget>
           </item>
@@ -200,7 +200,7 @@
           <item row="4" column="0">
            <widget class="QLabel" name="commonTabLable4_2">
             <property name="text">
-             <string>自动设置系统代理</string>
+             <string>Set system proxy automatically</string>
             </property>
            </widget>
           </item>
@@ -220,7 +220,7 @@
           <item row="8" column="0">
            <widget class="QLabel" name="commonTabLabelSuppressProxyWarning">
             <property name="text">
-             <string>覆盖代理时不再提示</string>
+             <string>Don't warn when overwriting the proxy</string>
             </property>
            </widget>
           </item>
@@ -254,7 +254,7 @@
      </widget>
      <widget class="QWidget" name="loginTab">
       <attribute name="title">
-       <string>认证</string>
+       <string>Authentication</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_9">
        <item row="6" column="0">
@@ -273,7 +273,7 @@
        <item row="1" column="0">
         <widget class="QGroupBox" name="commonGroupBox">
          <property name="title">
-          <string>通用</string>
+          <string>General</string>
          </property>
          <layout class="QGridLayout" name="commonLayout">
           <item row="1" column="1">
@@ -307,21 +307,21 @@
           <item row="2" column="1" colspan="4">
            <widget class="QLineEdit" name="usernameLineEdit">
             <property name="placeholderText">
-             <string>VPN 账号</string>
+             <string>VPN account</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="commonTabLable2">
             <property name="text">
-             <string>账号</string>
+             <string>Account</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
            <widget class="QLabel" name="commonTabLable3">
             <property name="text">
-             <string>密码</string>
+             <string>Password</string>
             </property>
            </widget>
           </item>
@@ -345,14 +345,14 @@
           <item row="1" column="0">
            <widget class="QLabel" name="zjuConnectTabLabel1">
             <property name="text">
-             <string>服务器地址</string>
+             <string>Server address</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="protocolLabel">
             <property name="text">
-             <string>协议</string>
+             <string>Protocol</string>
             </property>
            </widget>
           </item>
@@ -375,7 +375,7 @@
              <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
-             <string>VPN 密码</string>
+             <string>VPN password</string>
             </property>
            </widget>
           </item>
@@ -388,7 +388,7 @@
           <bool>false</bool>
          </property>
          <property name="title">
-          <string>EasyConnect 认证信息</string>
+          <string>EasyConnect Authentication</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_1">
           <item row="4" column="0">
@@ -413,7 +413,7 @@
              <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
-             <string>可选，证书密码</string>
+             <string>Optional: certificate password</string>
             </property>
            </widget>
           </item>
@@ -433,14 +433,14 @@
           <item row="0" column="1">
            <widget class="QLineEdit" name="certFileLineEdit">
             <property name="placeholderText">
-             <string>可选，p12/pfx 证书文件路径</string>
+             <string>Optional: path to a p12/pfx certificate file</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="certPasswordLabel">
             <property name="text">
-             <string>证书密码</string>
+             <string>Certificate password</string>
             </property>
            </widget>
           </item>
@@ -463,28 +463,28 @@
              <enum>QLineEdit::EchoMode::Password</enum>
             </property>
             <property name="placeholderText">
-             <string>可选，以通过 TOTP 验证器</string>
+             <string>Optional: used to pass TOTP verification</string>
             </property>
            </widget>
           </item>
           <item row="0" column="2" colspan="2">
            <widget class="QPushButton" name="certFileBrowseButton">
             <property name="text">
-             <string>浏览</string>
+             <string>Browse</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
            <widget class="QLabel" name="zjuConnectTabLabel6_2">
             <property name="text">
-             <string>TOTP 密钥</string>
+             <string>TOTP secret</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="certFileLabel">
             <property name="text">
-             <string>证书文件</string>
+             <string>Certificate file</string>
             </property>
            </widget>
           </item>
@@ -494,7 +494,7 @@
        <item row="4" column="0">
         <widget class="QGroupBox" name="authInfoGroupBox">
          <property name="title">
-          <string>aTrust 认证信息</string>
+          <string>aTrust Authentication</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_8">
           <item row="6" column="1" colspan="2">
@@ -518,7 +518,7 @@
                </size>
               </property>
               <property name="placeholderText">
-               <string>国家</string>
+               <string>Country</string>
               </property>
              </widget>
             </item>
@@ -535,7 +535,7 @@
                <bool>false</bool>
               </property>
               <property name="placeholderText">
-               <string>手机号码，仅用于短信</string>
+               <string>Phone number, SMS only</string>
               </property>
              </widget>
             </item>
@@ -550,14 +550,14 @@
              <string/>
             </property>
             <property name="placeholderText">
-             <string>可选，可自动生成，仅用于 CAS/OAuth2</string>
+             <string>Optional: generated automatically if empty; CAS/OAuth2 only</string>
             </property>
            </widget>
           </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_4">
             <property name="text">
-             <string>登录地址</string>
+             <string>Login URL</string>
             </property>
            </widget>
           </item>
@@ -580,14 +580,14 @@
           <item row="3" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>登录域</string>
+             <string>Login domain</string>
             </property>
            </widget>
           </item>
           <item row="6" column="0">
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>手机号码</string>
+             <string>Phone number</string>
             </property>
            </widget>
           </item>
@@ -600,7 +600,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>手动配置</string>
+             <string>Manual setup</string>
             </property>
            </widget>
           </item>
@@ -613,7 +613,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>配置认证方式</string>
+             <string>Fetch Authentication Methods</string>
             </property>
            </widget>
           </item>
@@ -632,7 +632,7 @@
              <string/>
             </property>
             <property name="placeholderText">
-             <string>可自动获取，默认 local</string>
+             <string>Can be fetched automatically; default: local</string>
             </property>
            </widget>
           </item>
@@ -644,7 +644,7 @@
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>密码</string>
+               <string>Password</string>
               </property>
               <property name="checked">
                <bool>true</bool>
@@ -657,7 +657,7 @@
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>短信</string>
+               <string>SMS</string>
               </property>
              </widget>
             </item>
@@ -686,7 +686,7 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>认证方式</string>
+             <string>Authentication method</string>
             </property>
            </widget>
           </item>
@@ -697,55 +697,55 @@
      </widget>
      <widget class="QWidget" name="zjuConnectTab">
       <attribute name="title">
-       <string>高级</string>
+       <string>Advanced</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="4" column="0">
         <widget class="QLabel" name="dnsServerBindLabel">
          <property name="text">
-          <string>DNS 监听地址</string>
+          <string>DNS listen address</string>
          </property>
         </widget>
        </item>
        <item row="4" column="1" colspan="3">
         <widget class="QLineEdit" name="dnsServerBindLineEdit">
          <property name="placeholderText">
-          <string>留空则禁用，例如 127.0.0.1:53</string>
+          <string>Leave empty to disable, e.g. 127.0.0.1:53</string>
          </property>
         </widget>
        </item>
        <item row="3" column="0">
         <widget class="QLabel" name="localDnsServerLabel">
          <property name="text">
-          <string>本地 DNS</string>
+          <string>Local DNS</string>
          </property>
         </widget>
        </item>
        <item row="3" column="1" colspan="3">
         <widget class="QLineEdit" name="localDnsServerLineEdit">
          <property name="placeholderText">
-          <string>用于解析 VPN 服务器域名，留空则使用系统 DNS</string>
+          <string>Resolves the VPN server's domain; leave empty to use the system DNS</string>
          </property>
         </widget>
        </item>
        <item row="8" column="1" colspan="3">
         <widget class="QLineEdit" name="shadowsocksUrlLineEdit">
          <property name="placeholderText">
-          <string>不填则不启用，格式：ss://chiper:password@server:port</string>
+          <string>Leave empty to disable. Format: ss://cipher:password@server:port</string>
          </property>
         </widget>
        </item>
        <item row="6" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel5">
          <property name="text">
-          <string>SOCKS5 代理端口</string>
+          <string>SOCKS5 proxy port</string>
          </property>
         </widget>
        </item>
        <item row="10" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel6_3">
          <property name="text">
-          <string>直连代理</string>
+          <string>Direct-connection proxy</string>
          </property>
         </widget>
        </item>
@@ -762,56 +762,56 @@
        <item row="1" column="1">
         <widget class="QLineEdit" name="dnsLineEdit">
          <property name="placeholderText">
-          <string>勾选自动，否则不应留空</string>
+          <string>Tick Auto, otherwise this should not be empty</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1" colspan="3">
         <widget class="QLineEdit" name="secondaryDnsLineEdit">
          <property name="placeholderText">
-          <string>不填则采用系统 DNS ，使用 DNS 劫持必须填写</string>
+          <string>Leave empty to use the system DNS; required for DNS hijack</string>
          </property>
         </widget>
        </item>
        <item row="8" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel10">
          <property name="text">
-          <string>Shadowsocks 代理</string>
+          <string>Shadowsocks proxy</string>
          </property>
         </widget>
        </item>
        <item row="7" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel6">
          <property name="text">
-          <string>HTTP 代理端口</string>
+          <string>HTTP proxy port</string>
          </property>
         </widget>
        </item>
        <item row="1" column="2" colspan="2">
         <widget class="QCheckBox" name="dnsAutoCheckBox">
          <property name="text">
-          <string>自动</string>
+          <string>Auto</string>
          </property>
         </widget>
        </item>
        <item row="9" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel12">
          <property name="text">
-          <string>节点优选间隔（秒）</string>
+          <string>Best-node update interval (s)</string>
          </property>
         </widget>
        </item>
        <item row="19" column="0" colspan="4">
         <widget class="QPushButton" name="portForwardingPushButton">
          <property name="text">
-          <string>其他设置（端口转发、自定义参数等）</string>
+          <string>Other settings (port forwarding, extra arguments, ...)</string>
          </property>
         </widget>
        </item>
        <item row="5" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel9_2">
          <property name="text">
-          <string>DNS TTL（秒）</string>
+          <string>DNS TTL (s)</string>
          </property>
         </widget>
        </item>
@@ -831,14 +831,14 @@
        <item row="10" column="1" colspan="3">
         <widget class="QLineEdit" name="dialDirectProxyLineEdit">
          <property name="placeholderText">
-          <string>直连情况下走的代理，支持：socks://... 或 http://...</string>
+          <string>Proxy used for direct connections. Supports socks://... or http://...</string>
          </property>
         </widget>
        </item>
        <item row="1" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel8">
          <property name="text">
-          <string>DNS 服务器</string>
+          <string>DNS server</string>
          </property>
         </widget>
        </item>
@@ -852,7 +852,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel9">
          <property name="text">
-          <string>备用 DNS</string>
+          <string>Secondary DNS</string>
          </property>
         </widget>
        </item>
@@ -861,59 +861,59 @@
          <item row="0" column="1">
           <widget class="QCheckBox" name="keepAliveCheckBox">
            <property name="text">
-            <string>定时保活</string>
+            <string>Keep-alive</string>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
           <widget class="QCheckBox" name="disableServerConfigCheckBox">
            <property name="text">
-            <string>忽略服务器配置</string>
+            <string>Ignore server config</string>
            </property>
           </widget>
          </item>
          <item row="3" column="0">
           <widget class="QCheckBox" name="tunCheckBox">
            <property name="text">
-            <string>TUN 模式</string>
+            <string>TUN mode</string>
            </property>
           </widget>
          </item>
          <item row="0" column="2">
           <widget class="QCheckBox" name="outsideAccessCheckBox">
            <property name="text">
-            <string>允许外部访问</string>
+            <string>Allow LAN access</string>
            </property>
           </widget>
          </item>
          <item row="1" column="0">
           <widget class="QCheckBox" name="skipDomainResourceCheckBox">
            <property name="text">
-            <string>忽略域名资源</string>
+            <string>Skip domain resources</string>
            </property>
           </widget>
          </item>
          <item row="1" column="2">
           <widget class="QCheckBox" name="proxyAllCheckBox">
            <property name="text">
-            <string>代理全部流量</string>
+            <string>Proxy all traffic</string>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
           <widget class="QCheckBox" name="routeCheckBox">
            <property name="toolTip">
-            <string>TUN 模式下有效</string>
+            <string>Effective in TUN mode</string>
            </property>
            <property name="text">
-            <string>设置路由（TUN）</string>
+            <string>Add routes (TUN)</string>
            </property>
           </widget>
          </item>
          <item row="0" column="0">
           <widget class="QCheckBox" name="multiLineCheckBox">
            <property name="text">
-            <string>自动选择线路</string>
+            <string>Auto-select line</string>
            </property>
            <property name="autoExclusive">
             <bool>false</bool>
@@ -926,61 +926,61 @@
          <item row="3" column="2">
           <widget class="QCheckBox" name="dnsHijackCheckBox">
            <property name="toolTip">
-            <string>TUN 模式下有效</string>
+            <string>Effective in TUN mode</string>
            </property>
            <property name="text">
-            <string>DNS 劫持（TUN）</string>
+            <string>DNS hijack (TUN)</string>
            </property>
           </widget>
          </item>
          <item row="4" column="0">
           <widget class="QCheckBox" name="fakeIPCheckBox">
            <property name="toolTip">
-            <string>aTrust 协议 TUN 模式下有效</string>
+            <string>Effective in TUN mode with aTrust</string>
            </property>
            <property name="text">
-            <string>Fake IP（TUN）</string>
+            <string>Fake IP (TUN)</string>
            </property>
           </widget>
          </item>
          <item row="4" column="1">
           <widget class="QCheckBox" name="tcpTunnelModeCheckBox">
            <property name="text">
-            <string>禁用 L3 隧道</string>
+            <string>Disable L3 tunnel</string>
            </property>
           </widget>
          </item>
          <item row="4" column="2">
           <widget class="QCheckBox" name="autoDetectInterfaceCheckBox">
            <property name="toolTip">
-            <string>自动检测并绑定 VPN 底层网络接口</string>
+            <string>Detect and bind the VPN's underlying network interface automatically</string>
            </property>
            <property name="text">
-            <string>自动检测网口</string>
+            <string>Auto-detect interface</string>
            </property>
           </widget>
          </item>
          <item row="2" column="1">
           <widget class="QCheckBox" name="zjuDefaultCheckBox">
            <property name="text">
-            <string>ZJU 默认配置</string>
+            <string>ZJU default config</string>
            </property>
           </widget>
          </item>
          <item row="2" column="0">
           <widget class="QCheckBox" name="disableDNSCheckBox">
            <property name="text">
-            <string>禁用内部 DNS</string>
+            <string>Disable internal DNS</string>
            </property>
           </widget>
          </item>
          <item row="2" column="2">
           <widget class="QCheckBox" name="credentialsAsArgumentsCheckBox">
            <property name="toolTip">
-            <string>不勾选则凭据以环境变量传递</string>
+            <string>When unchecked, credentials are passed as environment variables</string>
            </property>
            <property name="text">
-            <string>凭据以参数传递</string>
+            <string>Pass credentials as arguments</string>
            </property>
           </widget>
          </item>
@@ -1019,28 +1019,28 @@
        <item row="11" column="1" colspan="3">
         <widget class="QLineEdit" name="keepAliveUrlLineEdit">
          <property name="placeholderText">
-          <string>用于定时保活的 URL，留空为 DNS 保活</string>
+          <string>URL used for keep-alive; leave empty for DNS keep-alive</string>
          </property>
         </widget>
        </item>
        <item row="11" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel6_4">
          <property name="text">
-          <string>定时保活 URL</string>
+          <string>Keep-alive URL</string>
          </property>
         </widget>
        </item>
        <item row="12" column="1" colspan="3">
         <widget class="QLineEdit" name="bindInterfaceLineEdit">
          <property name="placeholderText">
-          <string>用于建立连接的网络接口，留空为自动选择</string>
+          <string>Network interface used for the connection; leave empty to choose automatically</string>
          </property>
         </widget>
        </item>
        <item row="12" column="0">
         <widget class="QLabel" name="zjuConnectTabLabel6_5">
          <property name="text">
-          <string>绑定网络接口</string>
+          <string>Bind interface</string>
          </property>
         </widget>
        </item>
@@ -1048,39 +1048,39 @@
      </widget>
      <widget class="QWidget" name="debugTab">
       <attribute name="title">
-       <string>调试</string>
+       <string>Debug</string>
       </attribute>
       <layout class="QVBoxLayout" name="debugTabLayout">
        <item>
         <widget class="QGroupBox" name="debugOptionsGroupBox">
          <property name="title">
-          <string>调试输出</string>
+          <string>Debug Output</string>
          </property>
          <layout class="QVBoxLayout" name="debugOptionsLayout">
           <item>
            <widget class="QCheckBox" name="detailedDebugCheckBox">
             <property name="text">
-             <string>启用详细调试输出</string>
+             <string>Enable verbose debug output</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QCheckBox" name="debugPcapCheckBox">
             <property name="toolTip">
-             <string>将 VPN 底层 TCP 收发数据保存为 PCAP 文件</string>
+             <string>Save the VPN's underlying TCP traffic to a PCAP file</string>
             </property>
             <property name="text">
-             <string>导出底层流量（PCAP）</string>
+             <string>Capture underlying traffic (PCAP)</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QCheckBox" name="debugTlsLogCheckBox">
             <property name="toolTip">
-             <string>导出 NSS key log，可配合 PCAP 在 Wireshark 中解密 TLS 流量</string>
+             <string>Export an NSS key log, which lets Wireshark decrypt the TLS traffic in the PCAP</string>
             </property>
             <property name="text">
-             <string>导出 TLS 会话密钥</string>
+             <string>Export TLS session keys</string>
             </property>
            </widget>
           </item>
@@ -1090,7 +1090,7 @@
        <item>
         <widget class="QLabel" name="debugTipLabel">
          <property name="text">
-          <string>如遇到协议实现问题，请勾选以上三个选项后运行，复现问题情况，然后进入日志目录将最新的输出打包发送给开发者，以供调试。</string>
+          <string>If you hit a protocol implementation problem, enable the three options above, reproduce the problem, then open the log directory and send the latest output to the developer.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -1105,7 +1105,7 @@
           </font>
          </property>
          <property name="text">
-          <string>警告：调试日志、PCAP 和 TLS 会话密钥可能包含账号、访问地址及会话密钥等敏感信息，请勿随意发送给他人。</string>
+          <string>Warning: debug logs, PCAP files and TLS session keys may contain sensitive data such as accounts, visited addresses and session keys. Do not share them carelessly.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -1115,7 +1115,7 @@
        <item>
         <widget class="QPushButton" name="openLogDirectoryPushButton">
          <property name="text">
-          <string>打开日志目录</string>
+          <string>Open Log Directory</string>
          </property>
         </widget>
        </item>

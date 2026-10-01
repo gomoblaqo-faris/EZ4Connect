@@ -72,14 +72,14 @@ void AutoStart::setEnabled(bool enabled)
         {
             QMessageBox::critical(
                 nullptr,
-                "取消开机自启动失败",
-                "无法删除登录项：" + process.errorString()
+                "Failed to Disable Launch at Login",
+                "Could not remove the login item: " + process.errorString()
             );
             return;
         }
         if (!enabled && process.exitCode() != 0)
         {
-            QMessageBox::critical(nullptr, "取消开机自启动失败", "无法删除登录项：" + error);
+            QMessageBox::critical(nullptr, "Failed to Disable Launch at Login", "Could not remove the login item: " + error);
             return;
         }
     }
@@ -97,8 +97,8 @@ void AutoStart::setEnabled(bool enabled)
         {
             QMessageBox::critical(
                 nullptr,
-                "设置开机自启动失败",
-                "无法创建登录项：" + process.errorString()
+                "Failed to Enable Launch at Login",
+                "Could not create the login item: " + process.errorString()
             );
             return;
         }
@@ -106,8 +106,8 @@ void AutoStart::setEnabled(bool enabled)
         {
             QMessageBox::critical(
                 nullptr,
-                "设置开机自启动失败",
-                "无法创建登录项：" + process.readAllStandardError()
+                "Failed to Enable Launch at Login",
+                "Could not create the login item: " + process.readAllStandardError()
             );
         }
     }
@@ -121,8 +121,8 @@ void AutoStart::setEnabled(bool enabled)
     {
         QMessageBox::critical(
             nullptr,
-            "取消开机自启动失败",
-            "无法删除 .desktop 文件：" + desktopFile.fileName()
+            "Failed to Disable Launch at Login",
+            "Could not remove the .desktop file: " + desktopFile.fileName()
         );
         return;
     }
@@ -134,8 +134,8 @@ void AutoStart::setEnabled(bool enabled)
     {
         QMessageBox::critical(
             nullptr,
-            "设置开机自启动失败",
-            "无法创建 autostart 目录：" + directoryPath
+            "Failed to Enable Launch at Login",
+            "Could not create the autostart directory: " + directoryPath
         );
         return;
     }
@@ -143,8 +143,8 @@ void AutoStart::setEnabled(bool enabled)
     {
         QMessageBox::critical(
             nullptr,
-            "设置开机自启动失败",
-            "无法创建 .desktop 文件：" + desktopFile.fileName()
+            "Failed to Enable Launch at Login",
+            "Could not create the .desktop file: " + desktopFile.fileName()
         );
         return;
     }

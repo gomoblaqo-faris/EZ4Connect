@@ -1,8 +1,4 @@
 #include <QApplication>
-#include <QDebug>
-#include <QLibraryInfo>
-#include <QLocale>
-#include <QTranslator>
 
 #include "SingleApplication"
 
@@ -22,7 +18,6 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(ApplicationConstants::ApplicationName);
     QApplication::setApplicationDisplayName(ApplicationConstants::ApplicationName);
     QApplication::setApplicationVersion(PROJ_VER);
-    QLocale::setDefault(QLocale(QLocale::Chinese, QLocale::SimplifiedChineseScript, QLocale::China));
 
     ApplicationLogFile applicationLogFile(ApplicationPaths::logFile());
     ApplicationLogger applicationLogger;
@@ -36,20 +31,6 @@ int main(int argc, char *argv[])
 #if defined(Q_OS_WINDOWS)
     QApplication::setFont(QFont("Microsoft YaHei UI", QApplication::font().pointSize()));
 #endif
-
-#if defined(Q_OS_WINDOWS)
-    QString translateModule = "qt";
-#else
-    QString translateModule = "qtbase";
-#endif
-    QTranslator qtTranslator;
-    QString translationsPath = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-    qDebug() << "Translations path:" << translationsPath << "module:" << translateModule;
-    if (qtTranslator.load(QLocale(QLocale::Chinese, QLocale::SimplifiedChineseScript, QLocale::China),
-                          translateModule, QString("_"), translationsPath))
-        app.installTranslator(&qtTranslator);
-    else
-        qDebug() << "Failed to load transaction file for" << translateModule;
 
     MainWindow mainWindow(&applicationLogger, &applicationLogFile);
 

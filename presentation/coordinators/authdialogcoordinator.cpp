@@ -71,26 +71,26 @@ void AuthDialogCoordinator::requestPhoneNumber(
     phoneNumberDialog = dialog;
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowModality(Qt::WindowModal);
-    dialog->setWindowTitle("短信验证");
+    dialog->setWindowTitle("SMS Verification");
 
     auto *layout = new QVBoxLayout(dialog);
-    layout->addWidget(new QLabel("请输入接收验证码的手机号码：", dialog));
+    layout->addWidget(new QLabel("Enter the phone number that will receive the code:", dialog));
 
     auto *phoneLayout = new QHBoxLayout;
     phoneLayout->addWidget(new QLabel("+", dialog));
     auto *countryCodeEdit = new QLineEdit(countryCode, dialog);
     countryCodeEdit->setObjectName("countryCodeLineEdit");
     countryCodeEdit->setMaximumWidth(60);
-    countryCodeEdit->setPlaceholderText("国家码");
+    countryCodeEdit->setPlaceholderText("Code");
     phoneLayout->addWidget(countryCodeEdit);
     phoneLayout->addWidget(new QLabel("-", dialog));
     auto *phoneNumberEdit = new QLineEdit(phoneNumber, dialog);
     phoneNumberEdit->setObjectName("phoneNumberLineEdit");
-    phoneNumberEdit->setPlaceholderText("手机号码");
+    phoneNumberEdit->setPlaceholderText("Phone number");
     phoneLayout->addWidget(phoneNumberEdit);
     layout->addLayout(phoneLayout);
 
-    auto *saveCheckBox = new QCheckBox("记住手机号码（可在设置中删除）", dialog);
+    auto *saveCheckBox = new QCheckBox("Remember phone number (can be removed in Settings)", dialog);
     layout->addWidget(saveCheckBox);
 
     auto *buttonBox = new QDialogButtonBox(
@@ -109,8 +109,8 @@ void AuthDialogCoordinator::requestPhoneNumber(
             {
                 QMessageBox::warning(
                     dialog,
-                    "警告",
-                    "国家码或手机号码不能为空。"
+                    "Warning",
+                    "The country code and phone number are required."
                 );
                 return;
             }
@@ -160,7 +160,7 @@ void AuthDialogCoordinator::requestSudoPassword()
 
 void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile)
 {
-    qInfo().noquote() << "需要图形验证码";
+    qInfo().noquote() << "Captcha required";
     const bool textInputMode = settings == nullptr
         || settings->value("ZJUConnect/Protocol", "easyconnect").toString() == "easyconnect";
     if (graphCaptchaWindow != nullptr)
@@ -177,13 +177,13 @@ void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile)
     connect(graphCaptchaWindow, &GraphCaptchaWindow::finishCaptcha, this,
             [this](const QByteArray &captcha)
             {
-                qInfo().noquote() << "图形验证码已提交";
+                qInfo().noquote() << "Captcha submitted";
                 emit interactiveInputSubmitted(captcha + "\n");
             });
     connect(graphCaptchaWindow, &GraphCaptchaWindow::cancelled, this,
             [this]()
             {
-                qInfo().noquote() << "图形验证码输入已取消";
+                qInfo().noquote() << "Captcha entry cancelled";
                 emit interactiveInputCancelled();
             });
     graphCaptchaWindow->show();
@@ -191,18 +191,18 @@ void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile)
 
 void AuthDialogCoordinator::requestSmsCode(bool showSkipSecondaryAuthOption)
 {
-    qInfo().noquote() << "需要短信验证码";
+    qInfo().noquote() << "SMS code required";
 
     QDialog dialog(parentWidget);
-    dialog.setWindowTitle("短信验证码");
+    dialog.setWindowTitle("SMS Code");
 
     auto *layout = new QVBoxLayout(&dialog);
-    layout->addWidget(new QLabel("请输入短信验证码：", &dialog));
+    layout->addWidget(new QLabel("Enter the SMS code:", &dialog));
 
     auto *codeEdit = new QLineEdit(&dialog);
     layout->addWidget(codeEdit);
 
-    auto *skipCheckBox = new QCheckBox("跳过以后的短信验证", &dialog);
+    auto *skipCheckBox = new QCheckBox("Skip SMS verification in future", &dialog);
     skipCheckBox->setVisible(showSkipSecondaryAuthOption);
     layout->addWidget(skipCheckBox);
 
@@ -217,7 +217,7 @@ void AuthDialogCoordinator::requestSmsCode(bool showSkipSecondaryAuthOption)
     const bool accepted = dialog.exec() == QDialog::Accepted;
     if (!accepted)
     {
-        qInfo().noquote() << "短信验证码输入已取消";
+        qInfo().noquote() << "SMS code entry cancelled";
         emit interactiveInputCancelled();
         return;
     }
@@ -229,24 +229,24 @@ void AuthDialogCoordinator::requestSmsCode(bool showSkipSecondaryAuthOption)
         input.prepend('$');
     }
 
-    qInfo().noquote() << "短信验证码已提交";
+    qInfo().noquote() << "SMS code submitted";
     emit interactiveInputSubmitted(input + "\n");
 }
 
 void AuthDialogCoordinator::requestRadiusCode(bool showSkipSecondaryAuthOption)
 {
-    qInfo().noquote() << "需要 RADIUS 动态口令（短信验证码）";
+    qInfo().noquote() << "RADIUS token (SMS code) required";
 
     QDialog dialog(parentWidget);
-    dialog.setWindowTitle("RADIUS 动态口令");
+    dialog.setWindowTitle("RADIUS Token");
 
     auto *layout = new QVBoxLayout(&dialog);
-    layout->addWidget(new QLabel("请输入收到的短信验证码（RADIUS token）：", &dialog));
+    layout->addWidget(new QLabel("Enter the SMS code you received (RADIUS token):", &dialog));
 
     auto *codeEdit = new QLineEdit(&dialog);
     layout->addWidget(codeEdit);
 
-    auto *skipCheckBox = new QCheckBox("跳过以后的二次认证", &dialog);
+    auto *skipCheckBox = new QCheckBox("Skip secondary authentication in future", &dialog);
     skipCheckBox->setVisible(showSkipSecondaryAuthOption);
     layout->addWidget(skipCheckBox);
 
@@ -261,7 +261,7 @@ void AuthDialogCoordinator::requestRadiusCode(bool showSkipSecondaryAuthOption)
     const bool accepted = dialog.exec() == QDialog::Accepted;
     if (!accepted)
     {
-        qInfo().noquote() << "RADIUS 动态口令输入已取消";
+        qInfo().noquote() << "RADIUS token entry cancelled";
         emit interactiveInputCancelled();
         return;
     }
@@ -273,30 +273,30 @@ void AuthDialogCoordinator::requestRadiusCode(bool showSkipSecondaryAuthOption)
         input.prepend('$');
     }
 
-    qInfo().noquote() << "RADIUS 动态口令已提交";
+    qInfo().noquote() << "RADIUS token submitted";
     emit interactiveInputSubmitted(input + "\n");
 }
 
 void AuthDialogCoordinator::requestTotpCode()
 {
-    qInfo().noquote() << "需要 TOTP 验证码";
+    qInfo().noquote() << "TOTP code required";
     bool accepted = false;
     const QString totp = QInputDialog::getText(
         parentWidget,
-        "TOTP 验证码",
-        "请输入 TOTP 验证码：",
+        "TOTP Code",
+        "Enter the TOTP code:",
         QLineEdit::Normal,
         "",
         &accepted
     );
     if (!accepted)
     {
-        qInfo().noquote() << "TOTP 验证码输入已取消";
+        qInfo().noquote() << "TOTP code entry cancelled";
         emit interactiveInputCancelled();
         return;
     }
 
-    qInfo().noquote() << "TOTP 验证码已提交";
+    qInfo().noquote() << "TOTP code submitted";
     emit interactiveInputSubmitted(totp.toLocal8Bit() + "\n");
 }
 
@@ -342,7 +342,7 @@ void AuthDialogCoordinator::requestSsoLogin()
         ssoUrl = serverUrl.resolved(QUrl(ssoUrl)).toString();
     }
 
-    qInfo().noquote() << QStringLiteral("单点登录：") + ssoUrl;
+    qInfo().noquote() << QStringLiteral("Single sign-on: ") + ssoUrl;
     ssoLoginWebView = new SsoLoginWebView(parentWidget);
     ssoLoginWebView->setAttribute(Qt::WA_DeleteOnClose);
     ssoLoginWebView->setCallbackServerUrl(serverUrl);

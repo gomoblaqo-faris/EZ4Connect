@@ -45,9 +45,9 @@ ConnectionUiController::ConnectionUiController(
       profileIdProvider(std::move(profileIdProvider)),
       notificationHandler(std::move(notificationHandler))
 {
-    connectButton->setText("连接服务器");
-    trayConnectAction->setText("连接服务器");
-    proxyButton->setText("设置系统代理");
+    connectButton->setText("Connect");
+    trayConnectAction->setText("Connect");
+    proxyButton->setText("Set System Proxy");
     proxyButton->hide();
 
     connect(
@@ -60,7 +60,7 @@ ConnectionUiController::ConnectionUiController(
         connectionSession,
         &ConnectionSession::savedSudoPasswordRejected,
         this,
-        []() { qWarning().noquote() << "sudo 密码可能有误，不使用记住的密码"; }
+        []() { qWarning().noquote() << "The sudo password may be wrong; discarding the remembered password"; }
     );
     connect(
         authenticationDialogs,
@@ -113,7 +113,7 @@ ConnectionUiController::ConnectionUiController(
         connectionSession,
         &ConnectionSession::reconnectScheduled,
         this,
-        [](int) { qInfo().noquote() << "正在尝试重新连接..."; }
+        [](int) { qInfo().noquote() << "Reconnecting..."; }
     );
     connect(
         connectionSession,
@@ -121,17 +121,17 @@ ConnectionUiController::ConnectionUiController(
         this,
         [this](ZJU_ERROR error)
         {
-            qInfo().noquote() << "VPN 断开！";
+            qInfo().noquote() << "VPN disconnected.";
             if (error != ZJU_ERROR::NONE)
             {
                 this->notificationHandler(
                     "VPN",
-                    "VPN 意外断开！",
+                    "VPN disconnected unexpectedly!",
                     QSystemTrayIcon::MessageIcon::Warning
                 );
             }
-            this->connectButton->setText("连接服务器");
-            this->trayConnectAction->setText("连接服务器");
+            this->connectButton->setText("Connect");
+            this->trayConnectAction->setText("Connect");
             this->proxyButton->hide();
             if (this->connectionSession->state() != ConnectionState::Interrupted)
             {
@@ -170,7 +170,7 @@ void ConnectionUiController::handleConnectClicked()
     if (settings()->contains("ZJUConnect/ServerAddress") &&
         settings()->value("ZJUConnect/ServerAddress").toString().isEmpty())
     {
-        QMessageBox::critical(parentWidget, "错误", "服务器地址不能为空");
+        QMessageBox::critical(parentWidget, "Error", "The server address is required.");
         return;
     }
 
@@ -195,9 +195,9 @@ void ConnectionUiController::handleConnectClicked()
     {
         QMessageBox::information(
             parentWidget,
-            "需要配置证书",
-            "当前配置选择了证书认证。\n"
-            "请通过“文件 → 配置引导”选择证书文件。"
+            "Certificate Required",
+            "This profile uses certificate authentication.\n"
+            "Choose a certificate file via Profile → Setup Guide."
         );
         return;
     }
@@ -214,8 +214,8 @@ void ConnectionUiController::handleConnectClicked()
         {
             QMessageBox::warning(
                 parentWidget,
-                "提升失败",
-                "无法以管理员权限重新启动，请手动以管理员方式运行。"
+                "Elevation Failed",
+                "Could not relaunch with administrator privileges. Please run the app as administrator."
             );
         }
         return;
@@ -291,13 +291,13 @@ void ConnectionUiController::handleProxyClicked()
             {
                 QMessageBox messageBox(
                     QMessageBox::Warning,
-                    "警告",
-                    "当前已存在系统代理配置（可能是 Clash 或其它代理软件）\n"
-                    "是否覆盖当前系统代理配置？",
+                    "Warning",
+                    "A system proxy is already configured (possibly by Clash or another proxy app).\n"
+                    "Overwrite the current system proxy settings?",
                     QMessageBox::Yes | QMessageBox::No,
                     parentWidget
                 );
-                auto *dontShowCheckBox = new QCheckBox("不再提示");
+                auto *dontShowCheckBox = new QCheckBox("Don't ask again");
                 messageBox.setCheckBox(dontShowCheckBox);
                 if (messageBox.exec() == QMessageBox::No)
                 {
@@ -314,12 +314,12 @@ void ConnectionUiController::handleProxyClicked()
             }
             else if (conflict)
             {
-                qInfo().noquote() << "跳过系统代理覆盖警告，因为已设置了不再提示";
+                qInfo().noquote() << "Skipping the system proxy overwrite warning (suppressed in settings)";
             }
 
             qInfo().noquote()
-                << "设置系统代理：HTTP端口 " + QString::number(httpPort)
-                       + "，SOCKS5 端口 " + QString::number(socksPort);
+                << "Setting system proxy: HTTP port " + QString::number(httpPort)
+                       + ", SOCKS5 port " + QString::number(socksPort);
             systemProxySession->enable(proxyConfig);
         },
         Qt::SingleShotConnection
@@ -354,8 +354,8 @@ void ConnectionUiController::startConnection(
         return;
     }
 
-    connectButton->setText("断开服务器");
-    trayConnectAction->setText("断开服务器");
+    connectButton->setText("Disconnect");
+    trayConnectAction->setText("Disconnect");
     proxyButton->show();
 
     if (settings()->value("Common/AutoSetProxy", false).toBool())
@@ -370,43 +370,43 @@ void ConnectionUiController::showConnectionError(ZJU_ERROR error)
     switch (error)
     {
     case ZJU_ERROR::INVALID_DETAIL:
-        message = "登录失败！\n请检查设置中的网络账号和密码是否设置正确。";
+        message = "Login failed!\nCheck that the account and password in Settings are correct.";
         break;
     case ZJU_ERROR::BRUTE_FORCE:
-        message = "登录失败！\n登录尝试过于频繁，IP 被风控，请稍后重试或换用 EasyConnect。";
+        message = "Login failed!\nToo many login attempts; this IP has been blocked. Try again later or switch to EasyConnect.";
         break;
     case ZJU_ERROR::OTHER_LOGIN_FAILED:
-        message = "登录失败！\n未知原因，可将日志反馈给开发者以便调查。";
+        message = "Login failed!\nUnknown reason. You can send the log to the developer for investigation.";
         break;
     case ZJU_ERROR::ACCESS_DENIED:
-        message = "权限不足！\n请关闭程序，点击右键以管理员身份运行。";
+        message = "Insufficient privileges!\nClose the app, then right-click it and run as administrator.";
         break;
     case ZJU_ERROR::LISTEN_FAILED:
-        message = "监听失败！\n请关闭占用端口的程序（如残留的 zju-connect.exe），或者监听其它端口。";
+        message = "Failed to listen!\nClose the program using the port (such as a leftover zju-connect process), or use a different port.";
         break;
     case ZJU_ERROR::CLIENT_FAILED:
-        message = "连接失败！\n可能是响应超时，请检查本地网络配置是否正常，服务器设置是否正确。";
+        message = "Connection failed!\nThe request may have timed out. Check your local network and the server settings.";
         break;
     case ZJU_ERROR::CAPTCHA_FAILED:
-        message = "登录失败！\n验证码问题，可能是已验证码过期或者有误。";
+        message = "Login failed!\nCaptcha problem: the code may have expired or been incorrect.";
         break;
     case ZJU_ERROR::PROGRAM_NOT_FOUND:
-        message = "程序未找到！\n请检查核心是否在正确路径下，检查是否解压在当前目录下。";
+        message = "Core not found!\nCheck that the core is in the right place and was extracted alongside the app.";
         break;
     case ZJU_ERROR::INTERACTIVE_ERROR:
-        message = "登录失败！\n请检查您的输入是否正确，检查是否完成 SSO 登录。";
+        message = "Login failed!\nCheck that your input was correct and that the SSO login was completed.";
         break;
     case ZJU_ERROR::AUTH_NOT_AVAILABLE:
-        message = "认证方式/登录域不可用！\n请通过“获取认证方式”按钮配置认证方式。";
+        message = "Authentication method or login domain unavailable!\nUse the Fetch Authentication Methods button to configure it.";
         break;
     case ZJU_ERROR::AUTH_EXPIRED:
-        message = "认证已过期！\n请重新登录。";
+        message = "Authentication expired!\nPlease log in again.";
         break;
     case ZJU_ERROR::OTHER:
-        message = "其它错误！\n未知原因，可将日志反馈给开发者以便调查。";
+        message = "Other error!\nUnknown reason. You can send the log to the developer for investigation.";
         break;
     case ZJU_ERROR::NONE:
         return;
     }
-    QMessageBox::critical(parentWidget, "错误", message);
+    QMessageBox::critical(parentWidget, "Error", message);
 }
