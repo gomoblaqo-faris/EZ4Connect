@@ -190,6 +190,25 @@ target_link_libraries(${PROJECT_NAME}
 
 endif() # EZ4CONNECT_BUILD_GUI
 
+# The command-line client. It needs terminal and signal handling that is
+# written for Unix only so far.
+if(UNIX)
+    add_executable(ez4connect-cli
+        cli/main.cpp
+        cli/terminalinput.cpp
+        cli/terminalprompter.cpp
+        cli/unixsignals.cpp
+    )
+    target_include_directories(ez4connect-cli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli)
+    target_link_libraries(ez4connect-cli PRIVATE ez4connect_engine)
+    if(NOT APPLE)
+        install(
+            TARGETS ez4connect-cli
+            RUNTIME DESTINATION bin
+        )
+    endif()
+endif()
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -231,6 +250,18 @@ if(BUILD_TESTING)
     # The stand-in cores are shell scripts.
     if(UNIX)
         ez4connect_test(zjuconnectprocess_test)
+
+        ez4connect_test(terminalprompter_test
+            cli/terminalinput.cpp
+            cli/terminalprompter.cpp
+        )
+        target_include_directories(terminalprompter_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli)
+
+        ez4connect_test(cli_test)
+        add_dependencies(cli_test ez4connect-cli)
+        target_compile_definitions(cli_test PRIVATE
+            EZ4CONNECT_CLI_PATH="$<TARGET_FILE:ez4connect-cli>"
+        )
     endif()
 
     if(EZ4CONNECT_BUILD_GUI)

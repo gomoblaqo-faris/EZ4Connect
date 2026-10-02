@@ -44,6 +44,41 @@ Then:
 
 For advanced traffic splitting together with Clash / Mihomo, see [Advanced usage](docs/ADVANCED_USAGE.md).
 
+## Command line
+
+`ez4connect-cli` connects from a terminal with the same profiles, saved passwords, reconnect
+behaviour and system-proxy handling as the graphical app. It is built on macOS and Linux; on macOS
+it is inside the app bundle, at `EZ4Connect.app/Contents/MacOS/ez4connect-cli`.
+
+```bash
+ez4connect-cli profiles                  # list the profiles; the active one is marked
+ez4connect-cli connect                   # connect with the active profile, until Ctrl+C
+ez4connect-cli connect --profile work    # use another profile
+ez4connect-cli connect --default-profile # use the default profile
+ez4connect-cli connect --no-proxy        # leave the system proxy alone
+ez4connect-cli trust-device              # mark this device as trusted (aTrust)
+```
+
+It asks on the terminal for whatever the login needs: account and password, SMS, TOTP or RADIUS
+codes, the sudo password for TUN mode. Run it with `--help` for every option. The log goes to
+standard output and the questions to standard error, so the log can be redirected to a file.
+
+What it cannot do:
+
+- **Picture captchas that are answered by clicking** (aTrust). Use the graphical app for a profile
+  that needs one. Captchas that are typed work: the picture is opened in the default viewer.
+- **Single sign-on in a built-in browser.** It prints the login address instead; open it in a
+  browser, log in, and paste the address the browser ends up on.
+- **Editing profiles.** Create and change them in the graphical app.
+- **Windows.**
+
+The graphical app and the command-line client use the same profile files without coordinating
+with each other. Do not edit a profile in the app's settings window while the client is connecting
+with it: whichever saves last wins.
+
+Exit codes: 0 after a connection that was ended with Ctrl+C, 1 when it failed or dropped, 2 when
+the command or the profile could not be used.
+
 ## Roadmap
 
 Suggestions are welcome in the Issues or in the OSA group.
@@ -78,6 +113,10 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
+
+To build only the command-line client, for example on a machine without a display, add
+`-DEZ4CONNECT_BUILD_GUI=OFF`. That needs just the Core, Concurrent, Network and Core5Compat
+modules.
 
 On macOS with Homebrew, the dependencies are:
 

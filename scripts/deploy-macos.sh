@@ -43,8 +43,12 @@ rm "$ZJU_ASSET"
 # Copy zju-connect into app bundle
 cp zju-connect "$APP_PATH/Contents/MacOS/"
 
+# The command-line client goes next to the core, which it looks for beside
+# itself, and shares the bundled Qt.
+cp "$BUILD_DIR/ez4connect-cli" "$APP_PATH/Contents/MacOS/"
+
 # Run macdeployqt
-macdeployqt "$APP_PATH"
+macdeployqt "$APP_PATH" -executable="$APP_PATH/Contents/MacOS/ez4connect-cli"
 
 # Reduce bundle size by stripping unused slices from universal Mach-O binaries.
 thinned_count=0
