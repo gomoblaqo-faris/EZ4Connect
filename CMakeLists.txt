@@ -49,8 +49,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(ENGINE_SOURCES
     core/connectionsessionstate.cpp
     application/applicationlogger.cpp
+    application/authprompter.h
     application/commandlineoptions.cpp
     application/coreprocess.h
+    application/connectionflow.cpp
     application/connectionsession.cpp
     application/defaultsettings.cpp
     application/profileimport.cpp
@@ -211,6 +213,7 @@ if(BUILD_TESTING)
     ez4connect_test(applicationlogfile_test)
     ez4connect_test(applicationpaths_test)
     ez4connect_test(autostart_test)
+    ez4connect_test(connectionflow_test)
     ez4connect_test(connectionsession_test)
     ez4connect_test(connectionsessionstate_test)
     ez4connect_test(corecommandbuilder_test)

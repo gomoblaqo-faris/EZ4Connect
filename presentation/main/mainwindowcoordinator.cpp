@@ -5,17 +5,20 @@
 #include <QDebug>
 
 #include "application/applicationconstants.h"
+#include "application/connectionflow.h"
 #include "application/connectionsession.h"
 #include "application/profileservice.h"
 #include "application/profilesettings.h"
 #include "application/secretstore.h"
 #include "application/systemproxysession.h"
+#include "infrastructure/coreprocess/coreexecutable.h"
 #include "infrastructure/coreprocess/zjuconnectprocess.h"
 #include "infrastructure/platform/platformsystemproxybackend.h"
 #ifdef EZ4CONNECT_HAS_KEYCHAIN
 #include "infrastructure/secrets/keychainsecretstore.h"
 #endif
 #include "infrastructure/settings/profilemanager.h"
+#include "infrastructure/settings/settingsprofileloader.h"
 #include "infrastructure/update/updatechecker.h"
 #include "presentation/coordinators/authdialogcoordinator.h"
 
@@ -36,9 +39,23 @@ MainWindowCoordinator::MainWindowCoordinator(
           this
       )),
       updateChecker(new UpdateChecker(this)),
-      authenticationCoordinator(new AuthDialogCoordinator(
-          parentWidget,
-          profileService->settings(),
+      authenticationCoordinator(new AuthDialogCoordinator(parentWidget, this)),
+      flow(new ConnectionFlow(
+          connectionSession,
+          systemProxySession,
+          authenticationCoordinator,
+          [this]() { return profileService->settings(); },
+          [this]() { return profileService->currentProfileId(); },
+          [](const QSettings &settings,
+             const QString &profileId,
+             const QString &username,
+             const QString &password)
+          {
+              ConnectionProfile profile =
+                  SettingsProfileLoader::load(settings, profileId, username, password);
+              profile.program = CoreExecutable::path();
+              return profile;
+          },
           this
       ))
 {
@@ -58,92 +75,6 @@ MainWindowCoordinator::MainWindowCoordinator(
     {
         ProfileSettings::retryPendingSecretRemovals();
     }
-
-    connect(
-        connectionSession,
-        &ConnectionSession::askSudoPass,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestSudoPassword
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::graphCaptcha,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestGraphCaptcha
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::smsCode,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestSmsCode
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::totpCode,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestTotpCode
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::randCode,
-        authenticationCoordinator,
-        [this]() { authenticationCoordinator->requestSmsCode(false); }
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::radiusCode,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestRadiusCode
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::ssoAuth,
-        authenticationCoordinator,
-        &AuthDialogCoordinator::requestSsoLogin
-    );
-    connect(
-        authenticationCoordinator,
-        &AuthDialogCoordinator::sudoPasswordSubmitted,
-        connectionSession,
-        &ConnectionSession::submitSudoPassword
-    );
-    connect(
-        authenticationCoordinator,
-        &AuthDialogCoordinator::interactiveInputSubmitted,
-        connectionSession,
-        &ConnectionSession::submitInput
-    );
-    connect(
-        authenticationCoordinator,
-        &AuthDialogCoordinator::interactiveInputCancelled,
-        connectionSession,
-        &ConnectionSession::cancelInteractiveInput
-    );
-
-    connect(
-        systemProxySession,
-        &SystemProxySession::operationFinished,
-        this,
-        [this](bool enabled)
-        {
-            if (enabled && !connectionSession->isActive())
-            {
-                systemProxySession->disable();
-            }
-        }
-    );
-    connect(
-        connectionSession,
-        &ConnectionSession::finished,
-        this,
-        [this](ZJU_ERROR)
-        {
-            if (systemProxySession->isEnabled())
-            {
-                systemProxySession->disable();
-            }
-        }
-    );
 }
 
 MainWindowCoordinator::~MainWindowCoordinator()
@@ -154,6 +85,11 @@ MainWindowCoordinator::~MainWindowCoordinator()
 ProfileService *MainWindowCoordinator::profiles() const
 {
     return profileService;
+}
+
+ConnectionFlow *MainWindowCoordinator::connectionFlow() const
+{
+    return flow;
 }
 
 ConnectionSession *MainWindowCoordinator::connection() const

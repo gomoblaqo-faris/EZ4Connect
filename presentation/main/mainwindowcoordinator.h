@@ -6,6 +6,7 @@
 #include <memory>
 
 class AuthDialogCoordinator;
+class ConnectionFlow;
 class ConnectionSession;
 class ProfileService;
 class SecretStore;
@@ -25,6 +26,7 @@ public:
     );
 
     ProfileService *profiles() const;
+    ConnectionFlow *connectionFlow() const;
     ConnectionSession *connection() const;
     SystemProxySession *systemProxy() const;
     UpdateChecker *updates() const;
@@ -41,6 +43,7 @@ private:
     SystemProxySession *systemProxySession;
     UpdateChecker *updateChecker;
     AuthDialogCoordinator *authenticationCoordinator;
+    ConnectionFlow *flow;
 };
 
 #endif // MAINWINDOWCOORDINATOR_H

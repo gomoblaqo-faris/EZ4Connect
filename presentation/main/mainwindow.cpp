@@ -328,12 +328,10 @@ MainWindow::MainWindow(
         ui->pushButton1,
         ui->pushButton2,
         trayConnectAction,
+        coordinator->connectionFlow(),
         connectionSession,
-        systemProxySession,
-        authenticationDialogs,
         applicationLogger,
         [this]() { return settings; },
-        [this]() { return currentProfileId; },
         [this](
             const QString &title,
             const QString &content,
@@ -732,7 +730,6 @@ bool MainWindow::switchProfile(const QString &profileId)
         return false;
     }
     settings = profileService->settings();
-    authenticationDialogs->setSettings(settings);
     currentProfileId = profileService->currentProfileId();
 
     upgradeSettings();
@@ -797,7 +794,6 @@ void MainWindow::createProfile()
 
     settings = profileService->settings();
     currentProfileId = profileService->currentProfileId();
-    authenticationDialogs->setSettings(settings);
     // The new profile starts as a copy of the previous one, so it still
     // points at that profile's saved passwords.
     ProfileSettings::detachSecrets(*settings);
@@ -962,7 +958,6 @@ void MainWindow::renameCurrentProfile()
 
     currentProfileId = profileService->currentProfileId();
     settings = profileService->settings();
-    authenticationDialogs->setSettings(settings);
     updateVersionInfo();
     refreshProfileMenu();
     clearLog();
@@ -1030,7 +1025,6 @@ void MainWindow::deleteCurrentProfile()
 
     currentProfileId = profileService->currentProfileId();
     settings = profileService->settings();
-    authenticationDialogs->setSettings(settings);
     upgradeSettings();
     updateVersionInfo();
     resetZjuConnectUi();

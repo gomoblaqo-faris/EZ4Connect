@@ -9,31 +9,18 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QSettings>
-#include <QUrlQuery>
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include "application/profilesettings.h"
 #include "presentation/dialogs/graphcaptchawindow/graphcaptchawindow.h"
 #include "presentation/dialogs/loginwindow/loginwindow.h"
 #include "presentation/dialogs/ssologinwebview/ssologinwebview.h"
 #include "presentation/dialogs/sudowindow/sudowindow.h"
 
-AuthDialogCoordinator::AuthDialogCoordinator(
-    QWidget *parentWidget,
-    QSettings *settings,
-    QObject *parent
-)
-    : QObject(parent),
-      parentWidget(parentWidget),
-      settings(settings)
+AuthDialogCoordinator::AuthDialogCoordinator(QWidget *parentWidget, QObject *parent)
+    : AuthPrompter(parent),
+      parentWidget(parentWidget)
 {
-}
-
-void AuthDialogCoordinator::setSettings(QSettings *newSettings)
-{
-    settings = newSettings;
 }
 
 void AuthDialogCoordinator::requestLogin(
@@ -159,11 +146,9 @@ void AuthDialogCoordinator::requestSudoPassword()
     sudoWindow->show();
 }
 
-void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile)
+void AuthDialogCoordinator::requestGraphCaptcha(const QString &graphFile, bool textInputMode)
 {
     qInfo().noquote() << "Captcha required";
-    const bool textInputMode = settings == nullptr
-        || ProfileSettings::read(*settings, ProfileSettings::Protocol) == "easyconnect";
     if (graphCaptchaWindow != nullptr)
     {
         graphCaptchaWindow->setGraph(graphFile, textInputMode);
@@ -301,12 +286,8 @@ void AuthDialogCoordinator::requestTotpCode()
     emit interactiveInputSubmitted(totp.toLocal8Bit() + "\n");
 }
 
-void AuthDialogCoordinator::requestSsoLogin()
+void AuthDialogCoordinator::requestSsoLogin(const QUrl &serverUrl, const QUrl &loginUrl)
 {
-    if (settings == nullptr)
-    {
-        return;
-    }
     if (ssoLoginWebView != nullptr)
     {
         ssoLoginWebView->raise();
@@ -314,46 +295,33 @@ void AuthDialogCoordinator::requestSsoLogin()
         return;
     }
 
-    const QString serverHost =
-        ProfileSettings::read(*settings, ProfileSettings::ServerAddress);
-    const int serverPort = ProfileSettings::read(*settings, ProfileSettings::ServerPort);
-    QUrl serverUrl;
-    serverUrl.setScheme("https");
-    serverUrl.setHost(serverHost);
-    if (serverPort != 443)
-    {
-        serverUrl.setPort(serverPort);
-    }
-
-    QString ssoUrl = ProfileSettings::read(*settings, ProfileSettings::LoginURL);
-    if (ssoUrl.isEmpty())
-    {
-        QUrl defaultSsoUrl = serverUrl;
-        defaultSsoUrl.setPath("/passport/v1/public/casLogin");
-        QUrlQuery query;
-        query.addQueryItem(
-            "sfDomain",
-            ProfileSettings::read(*settings, ProfileSettings::LoginDomain)
-        );
-        defaultSsoUrl.setQuery(query);
-        ssoUrl = defaultSsoUrl.toString();
-    }
-    if (ssoUrl.startsWith('/'))
-    {
-        ssoUrl = serverUrl.resolved(QUrl(ssoUrl)).toString();
-    }
-
-    // The query can carry tokens, so only where the login goes is logged.
-    qInfo().noquote() << QStringLiteral("Single sign-on: ")
-        + QUrl(ssoUrl).toString(QUrl::RemoveQuery | QUrl::RemoveFragment | QUrl::RemoveUserInfo);
     ssoLoginWebView = new SsoLoginWebView(parentWidget);
     ssoLoginWebView->setAttribute(Qt::WA_DeleteOnClose);
     ssoLoginWebView->setCallbackServerUrl(serverUrl);
-    ssoLoginWebView->setInitialUrl(QUrl::fromUserInput(ssoUrl));
+    ssoLoginWebView->setInitialUrl(loginUrl);
     connect(ssoLoginWebView, &SsoLoginWebView::loginCompleted, this,
             [this](const QString &url)
             {
                 emit interactiveInputSubmitted(url.toLocal8Bit() + "\n");
             });
     ssoLoginWebView->show();
+}
+
+AuthPrompter::ProxyOverwriteAnswer AuthDialogCoordinator::askProxyOverwrite()
+{
+    QMessageBox messageBox(
+        QMessageBox::Warning,
+        "Warning",
+        "A system proxy is already configured (possibly by Clash or another proxy app).\n"
+        "Overwrite the current system proxy settings?",
+        QMessageBox::Yes | QMessageBox::No,
+        parentWidget
+    );
+    auto *dontShowCheckBox = new QCheckBox("Don't ask again");
+    messageBox.setCheckBox(dontShowCheckBox);
+
+    ProxyOverwriteAnswer answer;
+    answer.overwrite = messageBox.exec() == QMessageBox::Yes;
+    answer.remember = answer.overwrite && dontShowCheckBox->isChecked();
+    return answer;
 }

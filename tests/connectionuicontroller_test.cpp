@@ -15,8 +15,10 @@
 #include <memory>
 
 #include "application/applicationlogger.h"
+#include "application/connectionflow.h"
 #include "application/connectionsession.h"
 #include "application/systemproxysession.h"
+#include "infrastructure/settings/settingsprofileloader.h"
 #include "presentation/coordinators/authdialogcoordinator.h"
 #include "presentation/coordinators/connectionuicontroller.h"
 
@@ -118,18 +120,30 @@ struct Fixture
           coreProcess(new FakeCoreProcess()),
           session(coreProcess),
           proxySession(std::make_unique<FakeProxyBackend>(&proxyCalls)),
-          authDialogs(&window, &settings),
+          authDialogs(&window),
+          flow(
+              &session,
+              &proxySession,
+              &authDialogs,
+              [this]() { return &settings; },
+              []() { return QString(); },
+              [](const QSettings &profileSettings,
+                 const QString &profileId,
+                 const QString &username,
+                 const QString &password)
+              {
+                  return SettingsProfileLoader::load(profileSettings, profileId, username, password);
+              }
+          ),
           controller(
               &window,
               &connectButton,
               &proxyButton,
               &trayAction,
+              &flow,
               &session,
-              &proxySession,
-              &authDialogs,
               &logger,
               [this]() { return &settings; },
-              []() { return QString(); },
               [this](const QString &, const QString &content, QSystemTrayIcon::MessageIcon)
               {
                   notifications << content;
@@ -169,6 +183,7 @@ struct Fixture
     ConnectionSession session;
     SystemProxySession proxySession;
     AuthDialogCoordinator authDialogs;
+    ConnectionFlow flow;
     QStringList notifications;
     ConnectionUiController controller;
 };
