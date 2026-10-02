@@ -19,51 +19,98 @@ endif()
 add_compile_definitions(PROJ_VER="${PROJ_VER}")
 message("PROJ_VER=${PROJ_VER}")
 
+option(EZ4CONNECT_BUILD_GUI
+    "Build the graphical app. Turn off to build only the command-line client, which needs none of the GUI Qt modules."
+    ON
+)
+
 find_package(Qt6 6.5 COMPONENTS
     Core
     Concurrent
-    Gui
-    Widgets
     Network
-    Svg
     Core5Compat
-    WebEngineWidgets
     REQUIRED
 )
+if(EZ4CONNECT_BUILD_GUI)
+    find_package(Qt6 6.5 COMPONENTS
+        Gui
+        Widgets
+        Svg
+        WebEngineWidgets
+        REQUIRED
+    )
+endif()
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-set(SOURCE_FILES
-    main.cpp
-    presentation/main/mainwindow.cpp
-    presentation/main/mainwindowcoordinator.cpp
-    presentation/coordinators/authdialogcoordinator.cpp
-    presentation/coordinators/connectionuicontroller.cpp
+# Everything below the user interface: the connection domain, the use cases
+# and the platform implementations. It does not use Qt Widgets, so the GUI,
+# the command-line client and the tests are all built on this one library.
+set(ENGINE_SOURCES
+    core/connectionsessionstate.cpp
     application/applicationlogger.cpp
     application/commandlineoptions.cpp
     application/coreprocess.h
     application/connectionsession.cpp
+    application/defaultsettings.cpp
     application/profileimport.cpp
     application/profileservice.cpp
     application/profilesettings.cpp
     application/settingsmigrator.cpp
     application/systemproxysession.cpp
-    application/defaultsettings.cpp
-    infrastructure/coreprocess/corecommandbuilder.cpp
     infrastructure/coreprocess/consoleoutputdecoder.cpp
+    infrastructure/coreprocess/corecommandbuilder.cpp
     infrastructure/coreprocess/coreexecutable.cpp
-    infrastructure/coreprocess/devicetrust.cpp
     infrastructure/coreprocess/coreoutputbuffer.cpp
     infrastructure/coreprocess/coreoutputparser.cpp
-    core/connectionsessionstate.cpp
+    infrastructure/coreprocess/devicetrust.cpp
+    infrastructure/coreprocess/zjuconnectprocess.cpp
     infrastructure/logging/applicationlogfile.cpp
     infrastructure/platform/autostart.cpp
+    infrastructure/platform/platformsystemproxybackend.cpp
     infrastructure/platform/privileges.cpp
+    infrastructure/platform/systemproxyfunctions.cpp
+    infrastructure/settings/profilemanager.cpp
     infrastructure/settings/settingsprofileloader.cpp
     infrastructure/storage/applicationpaths.cpp
     infrastructure/update/updatechecker.cpp
-    infrastructure/platform/platformsystemproxybackend.cpp
-    infrastructure/platform/systemproxyfunctions.cpp
-    infrastructure/coreprocess/zjuconnectprocess.cpp
+)
+
+# Saved passwords go to the system credential store when QtKeychain is
+# installed. Without it they stay in the profile file, as before.
+find_package(Qt6Keychain QUIET)
+if(Qt6Keychain_FOUND)
+    message("Credential storage: system keychain (QtKeychain)")
+    list(APPEND ENGINE_SOURCES infrastructure/secrets/keychainsecretstore.cpp)
+else()
+    message("Credential storage: profile file (QtKeychain not found)")
+endif()
+
+if(WIN32)
+    set(PLATFORM_LIBS wininet rasapi32 shell32)
+endif()
+
+add_library(ez4connect_engine STATIC ${ENGINE_SOURCES})
+target_link_libraries(ez4connect_engine PUBLIC
+    Qt::Core
+    Qt::Concurrent
+    Qt::Network
+    Qt::Core5Compat
+    ${PLATFORM_LIBS}
+)
+if(Qt6Keychain_FOUND)
+    target_link_libraries(ez4connect_engine PUBLIC Qt6Keychain::Qt6Keychain)
+    target_compile_definitions(ez4connect_engine PUBLIC EZ4CONNECT_HAS_KEYCHAIN)
+endif()
+
+if(EZ4CONNECT_BUILD_GUI)
+
+set(GUI_SOURCES
+    main.cpp
+    presentation/main/mainwindow.cpp
+    presentation/main/mainwindowcoordinator.cpp
+    presentation/coordinators/authdialogcoordinator.cpp
+    presentation/coordinators/connectionuicontroller.cpp
     presentation/presentationhelpers.cpp
     presentation/dialogs/extrasettingwindow/extrasettingwindow.cpp
     presentation/dialogs/settingwindow/settingwindow.cpp
@@ -74,21 +121,8 @@ set(SOURCE_FILES
     presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
     presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
     presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
-    infrastructure/settings/profilemanager.cpp
     resource.qrc
 )
-
-# Saved passwords go to the system credential store when QtKeychain is
-# installed. Without it they stay in the profile file, as before.
-find_package(Qt6Keychain QUIET)
-if(Qt6Keychain_FOUND)
-    message("Credential storage: system keychain (QtKeychain)")
-    list(APPEND SOURCE_FILES infrastructure/secrets/keychainsecretstore.cpp)
-else()
-    message("Credential storage: profile file (QtKeychain not found)")
-endif()
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 if (WIN32)
     message("Building for Windows")
@@ -96,11 +130,9 @@ if (WIN32)
     enable_language("RC")
 
     add_executable(${PROJECT_NAME} WIN32
-        ${SOURCE_FILES}
+        ${GUI_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/resource/icon.rc
     )
-
-    set(PLATFORM_LIBS wininet rasapi32 shell32)
 elseif(APPLE)
     message("Building for MacOS")
     
@@ -110,7 +142,7 @@ elseif(APPLE)
     set_source_files_properties(${app_icon_macos} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE
-        ${SOURCE_FILES}
+        ${GUI_SOURCES}
         ${app_icon_macos}
     )
 
@@ -132,7 +164,7 @@ elseif(APPLE)
     )
 else()
     add_executable(${PROJECT_NAME}
-        ${SOURCE_FILES}
+        ${GUI_SOURCES}
     )
 
     install(
@@ -146,213 +178,70 @@ set(QAPPLICATION_CLASS QApplication CACHE STRING "Inheritance class for SingleAp
 add_subdirectory(singleapplication)
 
 target_link_libraries(${PROJECT_NAME}
-        Qt::Core
-        Qt::Concurrent
+        ez4connect_engine
         Qt::Gui
         Qt::Widgets
-        Qt::Network
         Qt::Svg
-        Qt::Core5Compat
         Qt::WebEngineWidgets
         SingleApplication::SingleApplication
-        ${PLATFORM_LIBS}
 )
 
-if(Qt6Keychain_FOUND)
-    target_link_libraries(${PROJECT_NAME} Qt6Keychain::Qt6Keychain)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE EZ4CONNECT_HAS_KEYCHAIN)
-endif()
+endif() # EZ4CONNECT_BUILD_GUI
 
 include(CTest)
 
 if(BUILD_TESTING)
-    add_executable(applicationlogger_test
-        tests/applicationlogger_test.cpp
-        application/applicationlogger.cpp
-    )
-    target_include_directories(applicationlogger_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(applicationlogger_test Qt::Core)
-    add_test(NAME applicationlogger_test COMMAND applicationlogger_test)
+    # A test is its own source file plus the engine. Tests of the user
+    # interface also name the presentation sources they exercise.
+    function(ez4connect_test name)
+        add_executable(${name} tests/${name}.cpp ${ARGN})
+        target_link_libraries(${name} PRIVATE ez4connect_engine)
+        add_test(NAME ${name} COMMAND ${name})
+    endfunction()
 
-    add_executable(applicationlogfile_test
-        tests/applicationlogfile_test.cpp
-        infrastructure/logging/applicationlogfile.cpp
-    )
-    target_include_directories(applicationlogfile_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(applicationlogfile_test Qt::Core)
-    add_test(NAME applicationlogfile_test COMMAND applicationlogfile_test)
+    function(ez4connect_gui_test name)
+        ez4connect_test(${name} ${ARGN})
+        target_link_libraries(${name} PRIVATE Qt::Gui Qt::Widgets)
+        set_tests_properties(${name} PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        )
+    endfunction()
 
-    add_executable(corecommandbuilder_test
-        tests/corecommandbuilder_test.cpp
-        infrastructure/coreprocess/corecommandbuilder.cpp
-    )
-    target_include_directories(corecommandbuilder_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(corecommandbuilder_test Qt::Core)
-    add_test(NAME corecommandbuilder_test COMMAND corecommandbuilder_test)
-
-    add_executable(coreoutputparser_test
-        tests/coreoutputparser_test.cpp
-        infrastructure/coreprocess/coreoutputparser.cpp
-    )
-    target_include_directories(coreoutputparser_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(coreoutputparser_test Qt::Core)
-    add_test(NAME coreoutputparser_test COMMAND coreoutputparser_test)
-
-    add_executable(coreoutputbuffer_test
-        tests/coreoutputbuffer_test.cpp
-        infrastructure/coreprocess/coreoutputbuffer.cpp
-    )
-    target_include_directories(coreoutputbuffer_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(coreoutputbuffer_test Qt::Core)
-    add_test(NAME coreoutputbuffer_test COMMAND coreoutputbuffer_test)
-
-    add_executable(settingsprofileloader_test
-        tests/settingsprofileloader_test.cpp
-        infrastructure/settings/settingsprofileloader.cpp
-        application/profilesettings.cpp
-    )
-    target_include_directories(settingsprofileloader_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(settingsprofileloader_test Qt::Core)
-    add_test(NAME settingsprofileloader_test COMMAND settingsprofileloader_test)
-
-    add_executable(connectionsessionstate_test
-        tests/connectionsessionstate_test.cpp
-        core/connectionsessionstate.cpp
-    )
-    target_include_directories(connectionsessionstate_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(connectionsessionstate_test Qt::Core)
-    add_test(NAME connectionsessionstate_test COMMAND connectionsessionstate_test)
-
-    add_executable(connectionsession_test
-        tests/connectionsession_test.cpp
-        application/coreprocess.h
-        application/connectionsession.cpp
-        core/connectionsessionstate.cpp
-    )
-    target_include_directories(connectionsession_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(connectionsession_test Qt::Core)
-    add_test(NAME connectionsession_test COMMAND connectionsession_test)
-
-    add_executable(systemproxysession_test
-        tests/systemproxysession_test.cpp
-        application/systemproxysession.cpp
-    )
-    target_include_directories(systemproxysession_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(systemproxysession_test Qt::Core Qt::Concurrent)
-    add_test(NAME systemproxysession_test COMMAND systemproxysession_test)
-
-    add_executable(updatechecker_test
-        tests/updatechecker_test.cpp
-        infrastructure/update/updatechecker.cpp
-        infrastructure/coreprocess/coreexecutable.cpp
-    )
-    target_include_directories(updatechecker_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(updatechecker_test Qt::Core Qt::Gui Qt::Widgets Qt::Network Qt::Core5Compat)
-    add_test(NAME updatechecker_test COMMAND updatechecker_test)
-
-    add_executable(settingsmigrator_test
-        tests/settingsmigrator_test.cpp
-        application/settingsmigrator.cpp
-        application/defaultsettings.cpp
-        application/profilesettings.cpp
-    )
-    target_include_directories(settingsmigrator_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(settingsmigrator_test Qt::Core)
-    add_test(NAME settingsmigrator_test COMMAND settingsmigrator_test)
-
-    add_executable(profilesettings_test
-        tests/profilesettings_test.cpp
-        application/defaultsettings.cpp
-        application/profilesettings.cpp
-    )
-    target_include_directories(profilesettings_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(profilesettings_test Qt::Core)
-    add_test(NAME profilesettings_test COMMAND profilesettings_test)
-
-    add_executable(autostart_test
-        tests/autostart_test.cpp
-        infrastructure/platform/autostart.cpp
-    )
-    target_include_directories(autostart_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(autostart_test Qt::Core)
-    add_test(NAME autostart_test COMMAND autostart_test)
-
-    add_executable(profileimport_test
-        tests/profileimport_test.cpp
-        application/profileimport.cpp
-        application/defaultsettings.cpp
-        application/profilesettings.cpp
-        application/settingsmigrator.cpp
-    )
-    target_include_directories(profileimport_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(profileimport_test Qt::Core)
-    add_test(NAME profileimport_test COMMAND profileimport_test)
-
-    add_executable(profileservice_test
-        tests/profileservice_test.cpp
-        application/profileservice.cpp
-    )
-    target_include_directories(profileservice_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(profileservice_test Qt::Core)
-    add_test(NAME profileservice_test COMMAND profileservice_test)
-
-    add_executable(profilemanager_test
-        tests/profilemanager_test.cpp
-        infrastructure/settings/profilemanager.cpp
-    )
-    target_include_directories(profilemanager_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(profilemanager_test Qt::Core)
-    add_test(NAME profilemanager_test COMMAND profilemanager_test)
-
-    add_executable(applicationpaths_test
-        tests/applicationpaths_test.cpp
-        infrastructure/storage/applicationpaths.cpp
-    )
-    target_include_directories(applicationpaths_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(applicationpaths_test Qt::Core)
-    add_test(NAME applicationpaths_test COMMAND applicationpaths_test)
+    ez4connect_test(applicationlogger_test)
+    ez4connect_test(applicationlogfile_test)
+    ez4connect_test(applicationpaths_test)
+    ez4connect_test(autostart_test)
+    ez4connect_test(connectionsession_test)
+    ez4connect_test(connectionsessionstate_test)
+    ez4connect_test(corecommandbuilder_test)
+    ez4connect_test(coreoutputbuffer_test)
+    ez4connect_test(coreoutputparser_test)
+    ez4connect_test(profileimport_test)
+    ez4connect_test(profilemanager_test)
+    ez4connect_test(profileservice_test)
+    ez4connect_test(profilesettings_test)
+    ez4connect_test(settingsmigrator_test)
+    ez4connect_test(settingsprofileloader_test)
+    ez4connect_test(systemproxysession_test)
+    ez4connect_test(updatechecker_test)
 
     # The stand-in cores are shell scripts.
     if(UNIX)
-        add_executable(zjuconnectprocess_test
-            tests/zjuconnectprocess_test.cpp
-            application/coreprocess.h
-            infrastructure/coreprocess/zjuconnectprocess.cpp
-            infrastructure/coreprocess/corecommandbuilder.cpp
-            infrastructure/coreprocess/consoleoutputdecoder.cpp
-            infrastructure/coreprocess/coreoutputbuffer.cpp
-            infrastructure/coreprocess/coreoutputparser.cpp
-            infrastructure/platform/privileges.cpp
-            infrastructure/storage/applicationpaths.cpp
-        )
-        target_include_directories(zjuconnectprocess_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(zjuconnectprocess_test Qt::Core Qt::Core5Compat)
-        add_test(NAME zjuconnectprocess_test COMMAND zjuconnectprocess_test)
+        ez4connect_test(zjuconnectprocess_test)
     endif()
 
-    add_executable(configurationguidedialog_test
-        tests/configurationguidedialog_test.cpp
+    if(EZ4CONNECT_BUILD_GUI)
+    ez4connect_gui_test(configurationguidedialog_test
         presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
         presentation/dialogs/authinfowindow/authinfowindow.cpp
-        infrastructure/coreprocess/consoleoutputdecoder.cpp
-        infrastructure/coreprocess/coreexecutable.cpp
-        application/applicationlogger.cpp
-        application/profilesettings.cpp
-    )
-    target_include_directories(configurationguidedialog_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(configurationguidedialog_test
-        Qt::Core
-        Qt::Gui
-        Qt::Widgets
-        Qt::Core5Compat
-    )
-    add_test(NAME configurationguidedialog_test COMMAND configurationguidedialog_test)
-    set_tests_properties(configurationguidedialog_test PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )
 
-    add_executable(connectionuicontroller_test
-        tests/connectionuicontroller_test.cpp
+    ez4connect_gui_test(graphcaptchawindow_test
+        presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
+        presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
+    )
+
+    ez4connect_gui_test(connectionuicontroller_test
         presentation/coordinators/connectionuicontroller.cpp
         presentation/coordinators/authdialogcoordinator.cpp
         presentation/dialogs/loginwindow/loginwindow.cpp
@@ -361,38 +250,7 @@ if(BUILD_TESTING)
         presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
         presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
         presentation/presentationhelpers.cpp
-        application/applicationlogger.cpp
-        application/coreprocess.h
-        application/connectionsession.cpp
-        application/profilesettings.cpp
-        application/systemproxysession.cpp
-        core/connectionsessionstate.cpp
-        infrastructure/coreprocess/coreexecutable.cpp
-        infrastructure/platform/privileges.cpp
-        infrastructure/settings/settingsprofileloader.cpp
     )
-    target_include_directories(connectionuicontroller_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(connectionuicontroller_test
-        Qt::Core
-        Qt::Concurrent
-        Qt::Gui
-        Qt::Widgets
-        Qt::WebEngineWidgets
-    )
-    add_test(NAME connectionuicontroller_test COMMAND connectionuicontroller_test)
-    set_tests_properties(connectionuicontroller_test PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-    )
-
-    add_executable(graphcaptchawindow_test
-        tests/graphcaptchawindow_test.cpp
-        presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
-        presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
-    )
-    target_include_directories(graphcaptchawindow_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(graphcaptchawindow_test Qt::Core Qt::Gui Qt::Widgets)
-    add_test(NAME graphcaptchawindow_test COMMAND graphcaptchawindow_test)
-    set_tests_properties(graphcaptchawindow_test PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-    )
+    target_link_libraries(connectionuicontroller_test PRIVATE Qt::WebEngineWidgets)
+    endif() # EZ4CONNECT_BUILD_GUI
 endif()

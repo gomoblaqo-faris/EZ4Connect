@@ -1,6 +1,6 @@
 #include "infrastructure/update/updatechecker.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -127,7 +127,7 @@ int compareSuffixes(const QString &currentSuffix, const QString &latestSuffix)
 UpdateChecker::UpdateChecker(QObject *parent)
     : QObject(parent),
       versions{
-          QApplication::applicationVersion(),
+          QCoreApplication::applicationVersion(),
           QStringLiteral("checking"),
           QStringLiteral("unknown"),
           QStringLiteral("checking")
