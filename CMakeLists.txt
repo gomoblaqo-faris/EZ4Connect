@@ -377,5 +377,24 @@ if(BUILD_TESTING)
     target_compile_definitions(retranslation_test PRIVATE
         EZ4CONNECT_TRANSLATION_FILE="${CMAKE_CURRENT_SOURCE_DIR}/translations/ez4connect_zh_CN.ts"
     )
+
+    # Every message translated, with the placeholders and markup of its
+    # source; then the same on copies refreshed from the code, which catches
+    # text added without a translation.
+    add_executable(translations_test tests/translations_test.cpp)
+    target_link_libraries(translations_test PRIVATE Qt::Core)
+    list(TRANSFORM TRANSLATION_FILES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/"
+        OUTPUT_VARIABLE TRANSLATION_PATHS)
+    add_test(NAME translations_test COMMAND translations_test ${TRANSLATION_PATHS})
+    string(JOIN "|" TRANSLATION_FILES_ARGUMENT ${TRANSLATION_FILES})
+    add_test(NAME translations_current COMMAND ${CMAKE_COMMAND}
+        "-DLUPDATE=$<TARGET_FILE:Qt6::lupdate>"
+        "-DCHECKER=$<TARGET_FILE:translations_test>"
+        "-DSOURCE_ROOT=${CMAKE_CURRENT_SOURCE_DIR}"
+        "-DSOURCE_DIRS=application|infrastructure|presentation"
+        "-DTS_FILES=${TRANSLATION_FILES_ARGUMENT}"
+        "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/translations_current"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_translations_current.cmake"
+    )
     endif() # EZ4CONNECT_BUILD_GUI
 endif()

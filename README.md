@@ -146,6 +146,14 @@ cmake --build build --target update_translations
 linguist translations/ez4connect_ms.ts
 ```
 
+The tests fail while a message has no translation, or a translation drops one of the `%1`
+placeholders or the markup of its source; `translations_current` also catches text added to the
+code without running `update_translations`.
+
+The Simplified Chinese wording comes from the upstream project's own interface wherever the text
+is the same. Entries written since then, and all of the Malay, are marked *unfinished*: they are
+shipped and shown, and Qt Linguist lists them for review by a native speaker.
+
 Log messages stay in English, so a log can be read by whoever is asked for help, and the
 command-line client is not translated yet. Qt's own strings, such as standard buttons, come from
 Qt's translation catalogs (`qttranslations`); Qt has none for Malay, so those stay in English.
