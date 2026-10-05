@@ -207,6 +207,26 @@ void ProfileManager::setSilentStartEnabled(bool enabled) const
     state.sync();
 }
 
+QString ProfileManager::language() const
+{
+    QSettings state(statePath, QSettings::IniFormat);
+    return state.value("Global/Language").toString();
+}
+
+void ProfileManager::setLanguage(const QString &language) const
+{
+    QSettings state(statePath, QSettings::IniFormat);
+    if (language.isEmpty())
+    {
+        state.remove("Global/Language");
+    }
+    else
+    {
+        state.setValue("Global/Language", language);
+    }
+    state.sync();
+}
+
 QString ProfileManager::stateFilePath() const
 {
     return statePath;

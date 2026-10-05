@@ -57,6 +57,9 @@ dialogs.
   and does not depend on the concrete `QProcess` implementation.
 - `ProfileService` holds the current profile context, and `SettingsMigrator` migrates between
   configuration versions.
+- `LanguageManager` loads the translation for the chosen interface language and Qt's own; Qt
+  then sends `QEvent::LanguageChange` to every widget, and each window re-applies its text there.
+  The choice is kept in the global state file by `ProfileManager`.
 - `ProfileSettings` is the single definition of every profile setting: its key, the value a new
   profile starts with, and the value assumed when the key is missing. It also decides whether a
   secret lives in the credential store or in the profile file.

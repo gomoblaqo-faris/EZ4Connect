@@ -37,6 +37,7 @@ if(EZ4CONNECT_BUILD_GUI)
         Widgets
         Svg
         WebEngineWidgets
+        LinguistTools
         REQUIRED
     )
 endif()
@@ -123,8 +124,23 @@ set(GUI_SOURCES
     presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
     presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
     presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
+    presentation/language/languagemanager.cpp
+    presentation/language/languagemenu.cpp
     resource.qrc
 )
+
+# Listed so that lupdate reads their text; AUTOUIC compiles them either way.
+set(GUI_FORMS
+    presentation/main/mainwindow.ui
+    presentation/dialogs/authinfowindow/authinfowindow.ui
+    presentation/dialogs/extrasettingwindow/extrasettingwindow.ui
+    presentation/dialogs/graphcaptchawindow/graphcaptchawindow.ui
+    presentation/dialogs/loginwindow/loginwindow.ui
+    presentation/dialogs/settingwindow/settingwindow.ui
+    presentation/dialogs/ssologinwebview/ssologinwebview.ui
+    presentation/dialogs/sudowindow/sudowindow.ui
+)
+list(APPEND GUI_SOURCES ${GUI_FORMS})
 
 if (WIN32)
     message("Building for Windows")
@@ -187,6 +203,47 @@ target_link_libraries(${PROJECT_NAME}
         Qt::WebEngineWidgets
         SingleApplication::SingleApplication
 )
+
+# Interface translations. The English text passed to tr() is the key, and
+# each file in translations/ holds one language. They are compiled into the
+# app under :/i18n. After changing user-visible text, refresh them with
+#   cmake --build build --target update_translations
+set(TRANSLATION_FILES
+    translations/ez4connect_zh_CN.ts
+    translations/ez4connect_ms.ts
+)
+set(LUPDATE_OPTIONS -no-obsolete -locations none)
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
+    qt_add_lupdate(
+        TS_FILES ${TRANSLATION_FILES}
+        SOURCE_TARGETS ${PROJECT_NAME} ez4connect_engine
+        OPTIONS ${LUPDATE_OPTIONS}
+    )
+    qt_add_lrelease(
+        TS_FILES ${TRANSLATION_FILES}
+        QM_FILES_OUTPUT_VARIABLE TRANSLATION_QM_FILES
+    )
+else()
+    qt_add_lupdate(${PROJECT_NAME}
+        TS_FILES ${TRANSLATION_FILES}
+        # Replaces the target's own sources, so the GUI is listed too.
+        SOURCES ${GUI_SOURCES} ${ENGINE_SOURCES}
+        OPTIONS ${LUPDATE_OPTIONS}
+    )
+    qt_add_lrelease(${PROJECT_NAME}
+        TS_FILES ${TRANSLATION_FILES}
+        QM_FILES_OUTPUT_VARIABLE TRANSLATION_QM_FILES
+    )
+endif()
+
+function(ez4connect_add_translations target)
+    qt_add_resources(${target} "${target}_translations"
+        PREFIX "/i18n"
+        BASE "${CMAKE_CURRENT_BINARY_DIR}"
+        FILES ${TRANSLATION_QM_FILES}
+    )
+endfunction()
+ez4connect_add_translations(${PROJECT_NAME})
 
 endif() # EZ4CONNECT_BUILD_GUI
 
@@ -286,5 +343,14 @@ if(BUILD_TESTING)
         presentation/presentationhelpers.cpp
     )
     target_link_libraries(connectionuicontroller_test PRIVATE Qt::WebEngineWidgets)
+
+    ez4connect_test(languagemanager_test presentation/language/languagemanager.cpp)
+    ez4connect_add_translations(languagemanager_test)
+
+    ez4connect_gui_test(languagemenu_test
+        presentation/language/languagemanager.cpp
+        presentation/language/languagemenu.cpp
+    )
+    ez4connect_add_translations(languagemenu_test)
     endif() # EZ4CONNECT_BUILD_GUI
 endif()

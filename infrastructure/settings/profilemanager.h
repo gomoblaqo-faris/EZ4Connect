@@ -38,6 +38,12 @@ public:
 
     void setSilentStartEnabled(bool enabled) const;
 
+    // The interface language, shared by all profiles. Empty means "follow
+    // the system".
+    QString language() const;
+
+    void setLanguage(const QString &language) const;
+
     // The file that holds state shared by all profiles.
     QString stateFilePath() const;
 

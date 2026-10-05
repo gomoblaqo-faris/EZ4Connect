@@ -29,6 +29,7 @@
 #include "infrastructure/update/updatechecker.h"
 #include "presentation/coordinators/connectionuicontroller.h"
 #include "presentation/dialogs/configurationguidedialog/configurationguidedialog.h"
+#include "presentation/language/languagemenu.h"
 #include "presentation/presentationhelpers.h"
 #include "ui_mainwindow.h"
 
@@ -52,6 +53,7 @@ bool appendStyleSheet(const QString &path, QString &styleSheet)
 MainWindow::MainWindow(
     ApplicationLogger *logger,
     ApplicationLogFile *logFile,
+    LanguageManager *languageManager,
     QWidget *parent
 ) :
     QMainWindow(parent),
@@ -144,6 +146,7 @@ MainWindow::MainWindow(
             });
     setupTrayIcon();
     setupProfileMenu();
+    ui->fileMenu->insertMenu(ui->settingAction, new LanguageMenu(languageManager, ui->fileMenu));
 
     setWindowIcon(QIcon(QPixmap(":/resource/icon.png").scaled(
         512, 512, Qt::KeepAspectRatio, Qt::SmoothTransformation

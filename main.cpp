@@ -5,7 +5,9 @@
 #include "application/applicationlogger.h"
 #include "application/applicationconstants.h"
 #include "infrastructure/logging/applicationlogfile.h"
+#include "infrastructure/settings/profilemanager.h"
 #include "infrastructure/storage/applicationpaths.h"
+#include "presentation/language/languagemanager.h"
 #include "presentation/main/mainwindow.h"
 
 #ifndef PROJ_VER
@@ -32,7 +34,16 @@ int main(int argc, char *argv[])
     QApplication::setFont(QFont("Microsoft YaHei UI", QApplication::font().pointSize()));
 #endif
 
-    MainWindow mainWindow(&applicationLogger, &applicationLogFile);
+    // Applied before any window exists, so the first one is built in the
+    // right language. Later choices switch the open windows live.
+    const ProfileManager profileStorage;
+    LanguageManager languageManager;
+    languageManager.restore(
+        profileStorage.language(),
+        [&profileStorage](const QString &choice) { profileStorage.setLanguage(choice); }
+    );
+
+    MainWindow mainWindow(&applicationLogger, &applicationLogFile, &languageManager);
 
     QObject::connect(&app, &SingleApplication::aboutToQuit, &mainWindow, &MainWindow::cleanUpWhenQuit);
 

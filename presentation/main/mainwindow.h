@@ -22,6 +22,7 @@ namespace Ui
 class ApplicationLogger;
 class ApplicationLogFile;
 class ConnectionUiController;
+class LanguageManager;
 class UpdateChecker;
 
 class MainWindow : public QMainWindow
@@ -32,6 +33,7 @@ public:
     explicit MainWindow(
         ApplicationLogger *logger,
         ApplicationLogFile *logFile,
+        LanguageManager *languageManager,
         QWidget *parent = nullptr
     );
 

@@ -97,7 +97,8 @@ The layering, dependency direction and rules for where new code belongs are desc
 ### Building
 
 You need CMake, a C++17 compiler and Qt 6.5 or later with these modules: Core, Concurrent, Gui,
-Widgets, Network, Svg, Core5Compat and WebEngineWidgets.
+Widgets, Network, Svg, Core5Compat and WebEngineWidgets, plus the Linguist tools for the
+translations.
 
 [QtKeychain](https://github.com/frankosterfeld/qtkeychain) is optional. When CMake finds it, saved
 passwords are kept in the macOS Keychain, Windows Credential Manager or the Linux Secret Service.
@@ -121,13 +122,33 @@ modules.
 On macOS with Homebrew, the dependencies are:
 
 ```bash
-brew install cmake qtbase qtsvg qt5compat qtwebengine qtkeychain
+brew install cmake qtbase qtsvg qt5compat qtwebengine qttools qttranslations qtkeychain
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew
 ```
 
 The app needs the `zju-connect` core next to its own executable (inside `EZ4Connect.app/Contents/MacOS/`
 on macOS) or on `PATH`. The scripts in `scripts/` download the core and assemble a distributable
 package for each platform; they are what the release workflow runs.
+
+### Translations
+
+The interface is written in English, and the English text passed to `tr()` is the key for every
+translation. `translations/ez4connect_zh_CN.ts` (Simplified Chinese) and
+`translations/ez4connect_ms.ts` (Malay) are compiled into the app. **File → Language** switches
+the open windows at once and is remembered for all profiles; **System Default** follows the
+system's preferred languages and falls back to English.
+
+After changing text the user sees, refresh the translation files and translate the new entries,
+for example in Qt Linguist:
+
+```bash
+cmake --build build --target update_translations
+linguist translations/ez4connect_ms.ts
+```
+
+Log messages stay in English, so a log can be read by whoever is asked for help, and the
+command-line client is not translated yet. Qt's own strings, such as standard buttons, come from
+Qt's translation catalogs (`qttranslations`); Qt has none for Malay, so those stay in English.
 
 ## License
 

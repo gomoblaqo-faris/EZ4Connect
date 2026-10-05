@@ -58,11 +58,35 @@ bool keepsProfilesPrivateToTheirOwner()
 #endif
     return true;
 }
+
+bool remembersTheInterfaceLanguageForEveryProfile()
+{
+    QTemporaryDir directory;
+    if (!ProfileManager(directory.path()).language().isEmpty())
+    {
+        qCritical() << "a new installation should follow the system language";
+        return false;
+    }
+
+    ProfileManager(directory.path()).setLanguage("zh_CN");
+    ProfileManager reopened(directory.path());
+    const QString profileId = reopened.createProfile("work");
+    reopened.setActiveProfile(profileId);
+    if (reopened.language() != "zh_CN")
+    {
+        qCritical() << "the language was not kept:" << reopened.language();
+        return false;
+    }
+
+    reopened.setLanguage("");
+    return ProfileManager(directory.path()).language().isEmpty();
+}
 }
 
 int main(int argc, char *argv[])
 {
     QCoreApplication application(argc, argv);
     return createsPhysicalFilesForEmptyProfiles()
-        && keepsProfilesPrivateToTheirOwner() ? 0 : 1;
+        && keepsProfilesPrivateToTheirOwner()
+        && remembersTheInterfaceLanguageForEveryProfile() ? 0 : 1;
 }
