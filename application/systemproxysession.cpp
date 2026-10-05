@@ -89,6 +89,7 @@ bool SystemProxySession::startOperation(Operation operation, const SystemProxyCo
                 const OperationStatus status = proxyBackend->apply(config);
                 result.succeeded = status.succeeded;
                 result.error = status.error;
+                result.translatedError = status.errorForDisplay();
                 if (!status.succeeded)
                 {
                     // Applying touches several settings in turn, so undo
@@ -98,6 +99,7 @@ bool SystemProxySession::startOperation(Operation operation, const SystemProxyCo
                     {
                         result.leftPartiallyApplied = true;
                         result.error += "\n" + rollback.error;
+                        result.translatedError += "\n" + rollback.errorForDisplay();
                     }
                 }
                 break;
@@ -107,6 +109,7 @@ bool SystemProxySession::startOperation(Operation operation, const SystemProxyCo
                 const OperationStatus status = proxyBackend->clear();
                 result.succeeded = status.succeeded;
                 result.error = status.error;
+                result.translatedError = status.errorForDisplay();
                 break;
             }
             case Operation::None:
@@ -155,7 +158,7 @@ void SystemProxySession::handleOperationFinished()
         emit operationFinished(enabled);
         if (!result.succeeded)
         {
-            emit operationFailed(result.error);
+            emit operationFailed(result.error, result.translatedError);
         }
     }
 }

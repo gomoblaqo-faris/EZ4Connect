@@ -36,9 +36,8 @@ ConnectionUiController::ConnectionUiController(
       settingsProvider(std::move(settingsProvider)),
       notificationHandler(std::move(notificationHandler))
 {
-    connectButton->setText("Connect");
-    trayConnectAction->setText("Connect");
-    proxyButton->setText("Set System Proxy");
+    updateConnectText();
+    proxyButton->setText(tr("Set System Proxy"));
     proxyButton->hide();
 
     connect(
@@ -50,31 +49,31 @@ ConnectionUiController::ConnectionUiController(
 
     connect(connectionFlow, &ConnectionFlow::connectionStarted, this, [this]()
     {
-        this->connectButton->setText("Disconnect");
-        this->trayConnectAction->setText("Disconnect");
+        connectionRunning = true;
+        updateConnectText();
     });
     connect(connectionFlow, &ConnectionFlow::connectionEnded, this, [this]()
     {
-        this->connectButton->setText("Connect");
-        this->trayConnectAction->setText("Connect");
+        connectionRunning = false;
+        updateConnectText();
     });
     connect(connectionFlow, &ConnectionFlow::proxyControlAvailableChanged, this,
             [this](bool available) { this->proxyButton->setVisible(available); });
     connect(connectionFlow, &ConnectionFlow::droppedUnexpectedly, this, [this]()
     {
         this->notificationHandler(
-            "VPN",
-            "VPN disconnected unexpectedly!",
+            QStringLiteral("VPN"),
+            tr("VPN disconnected unexpectedly!"),
             QSystemTrayIcon::MessageIcon::Warning
         );
     });
     connect(connectionFlow, &ConnectionFlow::failed, this, [this](const QString &message)
     {
-        QMessageBox::critical(this->parentWidget, "Error", message);
+        QMessageBox::critical(this->parentWidget, tr("Error"), message);
     });
     connect(connectionFlow, &ConnectionFlow::proxyFailed, this, [this](const QString &error)
     {
-        QMessageBox::critical(this->parentWidget, "System Proxy", error);
+        QMessageBox::critical(this->parentWidget, tr("System Proxy"), error);
     });
     connect(connectionFlow, &ConnectionFlow::cannotConnect,
             this, &ConnectionUiController::showObstacle);
@@ -116,8 +115,8 @@ void ConnectionUiController::handleConnectClicked()
         {
             QMessageBox::warning(
                 parentWidget,
-                "Elevation Failed",
-                "Could not relaunch with administrator privileges. Please run the app as administrator."
+                tr("Elevation Failed"),
+                tr("Could not relaunch with administrator privileges. Please run the app as administrator.")
             );
         }
         return;
@@ -132,19 +131,31 @@ void ConnectionUiController::clearSystemProxy()
     connectionFlow->clearSystemProxy();
 }
 
+void ConnectionUiController::retranslate()
+{
+    updateConnectText();
+}
+
+void ConnectionUiController::updateConnectText()
+{
+    const QString text = connectionRunning ? tr("Disconnect") : tr("Connect");
+    connectButton->setText(text);
+    trayConnectAction->setText(text);
+}
+
 void ConnectionUiController::showObstacle(ConnectionFlow::Obstacle obstacle)
 {
     switch (obstacle)
     {
     case ConnectionFlow::Obstacle::MissingServerAddress:
-        QMessageBox::critical(parentWidget, "Error", "The server address is required.");
+        QMessageBox::critical(parentWidget, tr("Error"), tr("The server address is required."));
         break;
     case ConnectionFlow::Obstacle::MissingCertificate:
         QMessageBox::information(
             parentWidget,
-            "Certificate Required",
-            "This profile uses certificate authentication.\n"
-            "Choose a certificate file via Profile → Setup Guide."
+            tr("Certificate Required"),
+            tr("This profile uses certificate authentication.\n"
+               "Choose a certificate file via Profile → Setup Guide.")
         );
         break;
     }

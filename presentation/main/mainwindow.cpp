@@ -93,20 +93,18 @@ MainWindow::MainWindow(
     connect(updateChecker, &UpdateChecker::checkFailed, this,
             [this](UpdateComponent component, const QString &)
             {
-                const QString componentName =
-                    component == UpdateComponent::Ui ? QStringLiteral("UI") : QStringLiteral("core");
-                ui->versionLabel->setToolTip(
-                    ui->versionLabel->toolTip()
-                    + "\nFailed to check for " + componentName + " updates"
-                );
+                const QString failure = component == UpdateComponent::Ui
+                    ? tr("Failed to check for UI updates")
+                    : tr("Failed to check for core updates");
+                ui->versionLabel->setToolTip(ui->versionLabel->toolTip() + QLatin1Char('\n') + failure);
             });
     connect(updateChecker, &UpdateChecker::uiUpdateAvailable, this,
             [this](const QString &latestVersion)
             {
                 QMessageBox msgBox(this);
-                msgBox.setText("UI Update Available");
+                msgBox.setText(tr("UI Update Available"));
                 msgBox.setInformativeText(
-                    "A UI update is available: " + latestVersion + "\nOpen the GitHub releases page?"
+                    tr("A UI update is available: %1\nOpen the GitHub releases page?").arg(latestVersion)
                 );
                 msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
                 msgBox.setDefaultButton(QMessageBox::Ok);
@@ -136,7 +134,7 @@ MainWindow::MainWindow(
     connect(systemProxySession, &SystemProxySession::enabledChanged, this,
             [this](bool enabled)
             {
-                ui->pushButton2->setText(enabled ? "Clear System Proxy" : "Set System Proxy");
+                updateProxyButtonText();
                 if (!enabled && connectionSession != nullptr && !connectionSession->isActive())
                 {
                     ui->pushButton2->hide();
@@ -192,7 +190,7 @@ MainWindow::MainWindow(
                 }
                 else
                 {
-                    QMessageBox::warning(this, "Log File", "The log file could not be created.");
+                    QMessageBox::warning(this, tr("Log File"), tr("The log file could not be created."));
                 }
             });
 
@@ -201,11 +199,11 @@ MainWindow::MainWindow(
             [&]()
             {
                 QMessageBox messageBox(this);
-                messageBox.setWindowTitle("Clear System Proxy");
-                messageBox.setText("Clear the system proxy?");
+                messageBox.setWindowTitle(tr("Clear System Proxy"));
+                messageBox.setText(tr("Clear the system proxy?"));
 
-                messageBox.addButton(QMessageBox::Yes)->setText("Yes");
-                messageBox.addButton(QMessageBox::No)->setText("No");
+                messageBox.addButton(QMessageBox::Yes);
+                messageBox.addButton(QMessageBox::No);
                 messageBox.setDefaultButton(QMessageBox::Yes);
 
                 if (messageBox.exec() == QMessageBox::No)
@@ -230,11 +228,11 @@ MainWindow::MainWindow(
             [&]()
             {
                 QMessageBox messageBox(this);
-                messageBox.setWindowTitle("Clear Login Cache");
-                messageBox.setText("Clear the login cache?");
+                messageBox.setWindowTitle(tr("Clear Login Cache"));
+                messageBox.setText(tr("Clear the login cache?"));
 
-                messageBox.addButton(QMessageBox::Yes)->setText("Yes");
-                messageBox.addButton(QMessageBox::No)->setText("No");
+                messageBox.addButton(QMessageBox::Yes);
+                messageBox.addButton(QMessageBox::No);
                 messageBox.setDefaultButton(QMessageBox::Yes);
 
                 if (messageBox.exec() == QMessageBox::No)
@@ -258,12 +256,12 @@ MainWindow::MainWindow(
                         ProfileSettings::read(*settings, ProfileSettings::ServerPort),
                         currentProfileId, true);
                     qInfo().noquote() << "Device trusted";
-                    QMessageBox::information(this, "Success", "This device is now trusted.");
+                    QMessageBox::information(this, tr("Success"), tr("This device is now trusted."));
                 }
                 catch (const std::runtime_error &e)
                 {
                     qWarning().noquote() << "Failed to trust this device: " + QString(e.what());
-                    QMessageBox::critical(this, "Error", "Failed to trust this device:\n" + QString(e.what()));
+                    QMessageBox::critical(this, tr("Error"), tr("Failed to trust this device:\n%1").arg(DeviceTrust::describeFailure(e.what())));
                 }
             });
 
@@ -279,12 +277,12 @@ MainWindow::MainWindow(
                         ProfileSettings::read(*settings, ProfileSettings::ServerPort),
                         currentProfileId, false);
                     qInfo().noquote() << "Device untrusted";
-                    QMessageBox::information(this, "Success", "This device is no longer trusted.");
+                    QMessageBox::information(this, tr("Success"), tr("This device is no longer trusted."));
                 }
                 catch (const std::runtime_error &e)
                 {
                     qWarning().noquote() << "Failed to untrust this device: " + QString(e.what());
-                    QMessageBox::critical(this, "Error", "Failed to untrust this device:\n" + QString(e.what()));
+                    QMessageBox::critical(this, tr("Error"), tr("Failed to untrust this device:\n%1").arg(DeviceTrust::describeFailure(e.what())));
                 }
             });
 
@@ -386,7 +384,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     {
         event->ignore();
         hide();
-        showNotification("EZ4Connect", "Minimized to the system tray. Click the icon to restore the window.", QSystemTrayIcon::MessageIcon::Information);
+        showNotification(QApplication::applicationDisplayName(), tr("Minimized to the system tray. Click the icon to restore the window."), QSystemTrayIcon::MessageIcon::Information);
     }
     else
     {
@@ -403,7 +401,16 @@ void MainWindow::changeEvent(QEvent *event)
         {
             event->ignore();
             hide();
-            showNotification("EZ4Connect", "Minimized to the system tray. Click the icon to restore the window.", QSystemTrayIcon::MessageIcon::Information);
+            showNotification(QApplication::applicationDisplayName(), tr("Minimized to the system tray. Click the icon to restore the window."), QSystemTrayIcon::MessageIcon::Information);
+        }
+    }
+    else if (event->type() == QEvent::LanguageChange)
+    {
+        // Sent while the window is being built as well, before every part
+        // that retranslate() touches exists.
+        if (connectionUiController != nullptr)
+        {
+            retranslate();
         }
     }
     else
@@ -414,6 +421,8 @@ void MainWindow::changeEvent(QEvent *event)
 
 void MainWindow::clearLog()
 {
+    // The log stays in English whatever the interface language, so that
+    // anyone asked for help can read a copy of it.
     ui->logPlainTextEdit->clear();
     ui->logPlainTextEdit->appendPlainText(
         "Welcome to " + QApplication::applicationDisplayName() + "\n"
@@ -423,11 +432,37 @@ void MainWindow::clearLog()
         "Profile path: " + settings->fileName() + "\n");
 }
 
+void MainWindow::retranslate()
+{
+    ui->retranslateUi(this);
+    ui->applicationNameLabel->setText(QApplication::applicationDisplayName());
+
+    newProfileAction->setText(tr("New Profile"));
+    renameProfileAction->setText(tr("Rename Current Profile"));
+    deleteProfileAction->setText(tr("Delete Current Profile"));
+    trayProfileMenu->setTitle(tr("Profiles"));
+    trayShowAction->setText(tr("Show Main Window"));
+    trayCloseAction->setText(tr("Quit %1").arg(QApplication::applicationName()));
+
+    connectionUiController->retranslate();
+    updateProxyButtonText();
+    refreshProfileMenu();
+    updateVersionInfo();
+    updateConnectionState(connectionSession->state());
+}
+
+void MainWindow::updateProxyButtonText()
+{
+    ui->pushButton2->setText(
+        systemProxySession->isEnabled() ? tr("Clear System Proxy") : tr("Set System Proxy")
+    );
+}
+
 void MainWindow::resetZjuConnectUi()
 {
-    ui->pushButton1->setText("Connect");
-    trayConnectAction->setText("Connect");
-    ui->pushButton2->setText("Set System Proxy");
+    ui->pushButton1->setText(tr("Connect"));
+    trayConnectAction->setText(tr("Connect"));
+    ui->pushButton2->setText(tr("Set System Proxy"));
     ui->pushButton2->hide();
     updateConnectionState(ConnectionState::Disconnected);
     updateProfileSummary();
@@ -459,40 +494,40 @@ void MainWindow::updateConnectionState(ConnectionState state)
     {
     case ConnectionState::Disconnected:
         propertyValue = "disconnected";
-        title = "Not Connected";
-        detail = "Connect to access network resources.";
+        title = tr("Not Connected");
+        detail = tr("Connect to access network resources.");
         break;
     case ConnectionState::Starting:
         propertyValue = "starting";
-        title = "Connecting";
-        detail = "Starting the core and establishing a secure tunnel.";
+        title = tr("Connecting");
+        detail = tr("Starting the core and establishing a secure tunnel.");
         break;
     case ConnectionState::Running:
         propertyValue = "running";
-        title = "Connected";
+        title = tr("Connected");
         detail = systemProxySession->isEnabled()
-            ? "The VPN tunnel and the system proxy are both active."
-            : "The VPN tunnel is running. Enable the system proxy if you need it.";
+            ? tr("The VPN tunnel and the system proxy are both active.")
+            : tr("The VPN tunnel is running. Enable the system proxy if you need it.");
         break;
     case ConnectionState::Stopping:
         propertyValue = "stopping";
-        title = "Disconnecting";
-        detail = "Closing the current connection safely.";
+        title = tr("Disconnecting");
+        detail = tr("Closing the current connection safely.");
         break;
     case ConnectionState::Reconnecting:
         propertyValue = "reconnecting";
-        title = "Reconnecting";
-        detail = "Connection lost. Retrying according to the reconnect settings.";
+        title = tr("Reconnecting");
+        detail = tr("Connection lost. Retrying according to the reconnect settings.");
         break;
     case ConnectionState::Interrupted:
         propertyValue = "failed";
-        title = "Disconnected";
-        detail = "The VPN core exited unexpectedly. See the log on the right.";
+        title = tr("Disconnected");
+        detail = tr("The VPN core exited unexpectedly. See the log on the right.");
         break;
     case ConnectionState::Failed:
         propertyValue = "failed";
-        title = "Connection Failed";
-        detail = "See the log on the right and check your network and account settings.";
+        title = tr("Connection Failed");
+        detail = tr("See the log on the right and check your network and account settings.");
         break;
     }
 
@@ -515,7 +550,7 @@ void MainWindow::updateConnectionState(ConnectionState state)
 void MainWindow::updateProfileSummary()
 {
     const QString profileName = currentProfileId.isEmpty()
-        ? QStringLiteral("Default")
+        ? tr("Default")
         : currentProfileId;
     const QString protocolSetting = ProfileSettings::read(*settings, ProfileSettings::Protocol);
     const QString protocol = protocolSetting.compare(
@@ -525,7 +560,7 @@ void MainWindow::updateProfileSummary()
     const QString server = ProfileSettings::read(*settings, ProfileSettings::ServerAddress).trimmed();
 
     QStringList details{protocol};
-    details.append(server.isEmpty() ? QStringLiteral("No server configured") : server);
+    details.append(server.isEmpty() ? tr("No server configured") : server);
 
     ui->profileNameLabel->setText(profileName);
     ui->profileDetailLabel->setText(details.join(QStringLiteral(" · ")));
@@ -554,10 +589,10 @@ void MainWindow::setupTrayIcon()
         }
     });
 
-    trayConnectAction = new QAction("Connect", this);
-    trayProfileMenu = new QMenu("Profiles", this);
-    trayShowAction = new QAction("Show Main Window", this);
-    trayCloseAction = new QAction("Quit " + QApplication::applicationName(), this);
+    trayConnectAction = new QAction(tr("Connect"), this);
+    trayProfileMenu = new QMenu(tr("Profiles"), this);
+    trayShowAction = new QAction(tr("Show Main Window"), this);
+    trayCloseAction = new QAction(tr("Quit %1").arg(QApplication::applicationName()), this);
     trayCloseAction->setMenuRole(QAction::NoRole);
     trayMenu = new QMenu(this);
     trayMenu->addAction(trayConnectAction);
@@ -581,9 +616,9 @@ void MainWindow::setupProfileMenu()
 {
     // Must be called after setupTrayIcon, which creates trayProfileMenu
     ui->profileMenu->addSeparator();
-    newProfileAction = ui->profileMenu->addAction("New Profile");
-    renameProfileAction = ui->profileMenu->addAction("Rename Current Profile");
-    deleteProfileAction = ui->profileMenu->addAction("Delete Current Profile");
+    newProfileAction = ui->profileMenu->addAction(tr("New Profile"));
+    renameProfileAction = ui->profileMenu->addAction(tr("Rename Current Profile"));
+    deleteProfileAction = ui->profileMenu->addAction(tr("Delete Current Profile"));
     ui->profileMenu->addSeparator();
 
     connect(
@@ -635,7 +670,7 @@ void MainWindow::refreshProfileMenu()
     }
 
     switchGroup->setExclusive(true);
-    QAction *action = ui->profileMenu->addAction("Default");
+    QAction *action = ui->profileMenu->addAction(tr("Default"));
     action->setCheckable(true);
     action->setChecked(currentProfileId.isEmpty());
     switchGroup->addAction(action);
@@ -645,7 +680,7 @@ void MainWindow::refreshProfileMenu()
     });
     if (trayProfileMenu != nullptr)
     {
-        QAction *trayAction = trayProfileMenu->addAction("Default");
+        QAction *trayAction = trayProfileMenu->addAction(tr("Default"));
         trayAction->setCheckable(true);
         trayAction->setChecked(currentProfileId.isEmpty());
         traySwitchGroup->addAction(trayAction);
@@ -717,7 +752,7 @@ bool MainWindow::switchProfile(const QString &profileId)
 
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "Switch Failed", "Disconnect the VPN before switching profiles.");
+        QMessageBox::warning(this, tr("Switch Failed"), tr("Disconnect the VPN before switching profiles."));
         refreshProfileMenu();
         return false;
     }
@@ -753,15 +788,15 @@ void MainWindow::createProfile()
     }
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "Cannot Create Profile", "Disconnect the VPN before creating a profile.");
+        QMessageBox::warning(this, tr("Cannot Create Profile"), tr("Disconnect the VPN before creating a profile."));
         return;
     }
 
     bool ok = false;
     const QString name = QInputDialog::getText(
         this,
-        "New Profile",
-        "Enter a profile name:\n(letters, digits, underscores and hyphens only)",
+        tr("New Profile"),
+        tr("Enter a profile name:\n(letters, digits, underscores and hyphens only)"),
         QLineEdit::Normal,
         "",
         &ok
@@ -779,7 +814,7 @@ void MainWindow::createProfile()
     const QString newProfileId = profileService->createAndSwitch(name);
     if (newProfileId.isEmpty())
     {
-        QMessageBox::critical(this, "Create Failed", "Could not create the profile.");
+        QMessageBox::critical(this, tr("Create Failed"), tr("Could not create the profile."));
         return;
     }
     // A profile deleted by an older version may have left its login cache
@@ -789,9 +824,9 @@ void MainWindow::createProfile()
         qWarning().noquote() << "Could not clear old login data for profile: " + newProfileId;
         QMessageBox::warning(
             this,
-            "Old Login Data",
-            "Login data left under this profile name by an earlier profile could not be cleared.\n"
-            "Use File → Clear Login Cache before connecting."
+            tr("Old Login Data"),
+            tr("Login data left under this profile name by an earlier profile could not be cleared.\n"
+               "Use File → Clear Login Cache before connecting.")
         );
     }
 
@@ -808,8 +843,8 @@ void MainWindow::createProfile()
     refreshProfileMenu();
 
     promptConfigurationGuide(
-        "Profile Created",
-        "Profile \"" + newProfileId + "\" was created. Finish setting it up with the Setup Guide now?"
+        tr("Profile Created"),
+        tr("Profile \"%1\" was created. Finish setting it up with the Setup Guide now?").arg(newProfileId)
     );
 }
 
@@ -823,8 +858,8 @@ void MainWindow::openConfigurationGuide()
     {
         QMessageBox::warning(
             this,
-            "Cannot Modify Profile",
-            "Disconnect the VPN before using the Setup Guide."
+            tr("Cannot Modify Profile"),
+            tr("Disconnect the VPN before using the Setup Guide.")
         );
         return;
     }
@@ -878,8 +913,8 @@ void MainWindow::openConfigurationGuide()
 void MainWindow::promptFirstLaunchGuide()
 {
     promptConfigurationGuide(
-        "Welcome to EZ4Connect",
-        "This looks like the first launch. Set up a VPN server now?"
+        tr("Welcome to %1").arg(QApplication::applicationDisplayName()),
+        tr("This looks like the first launch. Set up a VPN server now?")
     );
 }
 
@@ -892,14 +927,14 @@ void MainWindow::promptConfigurationGuide(
     messageBox.setWindowTitle(windowTitle);
     messageBox.setText(text);
     messageBox.setInformativeText(
-        "The Setup Guide helps you choose a protocol and enter the server address, authentication method and credentials."
+        tr("The Setup Guide helps you choose a protocol and enter the server address, authentication method and credentials.")
     );
 
     QPushButton *startButton = messageBox.addButton(
-        "Open Setup Guide",
+        tr("Open Setup Guide"),
         QMessageBox::AcceptRole
     );
-    messageBox.addButton("Later", QMessageBox::RejectRole);
+    messageBox.addButton(tr("Later"), QMessageBox::RejectRole);
     messageBox.setDefaultButton(startButton);
     messageBox.exec();
 
@@ -916,7 +951,7 @@ void MainWindow::renameCurrentProfile()
         return;
     }
     bool ok = false;
-    QString name = QInputDialog::getText(this, "Rename Profile", "Enter a new profile name:\n(letters, digits, underscores and hyphens only)", QLineEdit::Normal, currentProfileId, &ok);
+    QString name = QInputDialog::getText(this, tr("Rename Profile"), tr("Enter a new profile name:\n(letters, digits, underscores and hyphens only)"), QLineEdit::Normal, currentProfileId, &ok);
     if (!ok)
     {
         return;
@@ -925,7 +960,7 @@ void MainWindow::renameCurrentProfile()
     const QString normalizedName = profileService->normalizeProfileId(name);
     if (normalizedName.isEmpty())
     {
-        QMessageBox::warning(this, "Rename Failed", "The profile name cannot be empty.");
+        QMessageBox::warning(this, tr("Rename Failed"), tr("The profile name cannot be empty."));
         return;
     }
     if (normalizedName == currentProfileId)
@@ -934,7 +969,7 @@ void MainWindow::renameCurrentProfile()
     }
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "Rename Failed", "Disconnect the VPN before renaming the profile.");
+        QMessageBox::warning(this, tr("Rename Failed"), tr("Disconnect the VPN before renaming the profile."));
         return;
     }
 
@@ -945,7 +980,7 @@ void MainWindow::renameCurrentProfile()
     const QString previousProfileId = currentProfileId;
     if (!profileService->renameCurrent(normalizedName))
     {
-        QMessageBox::warning(this, "Rename Failed", "A profile with that name already exists, or this profile cannot be renamed.");
+        QMessageBox::warning(this, tr("Rename Failed"), tr("A profile with that name already exists, or this profile cannot be renamed."));
         return;
     }
     if (!ApplicationPaths::moveProfileData(previousProfileId, normalizedName))
@@ -953,9 +988,9 @@ void MainWindow::renameCurrentProfile()
         qWarning().noquote() << "Could not move login data to the renamed profile: " + normalizedName;
         QMessageBox::warning(
             this,
-            "Login Data Not Moved",
-            "The profile was renamed, but its login data could not be moved.\n"
-            "You may have to log in and trust this device again."
+            tr("Login Data Not Moved"),
+            tr("The profile was renamed, but its login data could not be moved.\n"
+               "You may have to log in and trust this device again.")
         );
     }
 
@@ -975,15 +1010,15 @@ void MainWindow::deleteCurrentProfile()
     }
     if (currentProfileId.isEmpty())
     {
-        QMessageBox::warning(this, "Delete Failed", "The default profile cannot be deleted.");
+        QMessageBox::warning(this, tr("Delete Failed"), tr("The default profile cannot be deleted."));
         return;
     }
 
     QMessageBox messageBox(this);
-    messageBox.setWindowTitle("Delete Profile");
-    messageBox.setText("Delete the current profile \"" + currentProfileId + "\"?");
-    messageBox.addButton(QMessageBox::Yes)->setText("Yes");
-    messageBox.addButton(QMessageBox::No)->setText("No");
+    messageBox.setWindowTitle(tr("Delete Profile"));
+    messageBox.setText(tr("Delete the current profile \"%1\"?").arg(currentProfileId));
+    messageBox.addButton(QMessageBox::Yes);
+    messageBox.addButton(QMessageBox::No);
     messageBox.setDefaultButton(QMessageBox::No);
     if (messageBox.exec() != QMessageBox::Yes)
     {
@@ -995,7 +1030,7 @@ void MainWindow::deleteCurrentProfile()
         ProfileSettings::read(*settings, ProfileSettings::SecretId);
     if (connectionSession != nullptr && connectionSession->isActive())
     {
-        QMessageBox::warning(this, "Delete Failed", "Disconnect the VPN before deleting the profile.");
+        QMessageBox::warning(this, tr("Delete Failed"), tr("Disconnect the VPN before deleting the profile."));
         return;
     }
     if (settingWindow != nullptr)
@@ -1004,16 +1039,16 @@ void MainWindow::deleteCurrentProfile()
     }
     if (!profileService->removeCurrentAndSwitchToDefault())
     {
-        QMessageBox::warning(this, "Delete Failed", "Could not delete the profile file.");
+        QMessageBox::warning(this, tr("Delete Failed"), tr("Could not delete the profile file."));
         return;
     }
     if (!ProfileSettings::forgetSecrets(removedSecretId))
     {
         QMessageBox::warning(
             this,
-            "Saved Passwords Not Removed",
-            "The profile was deleted, but its saved passwords could not be removed from the "
-            "system credential store. Remove the EZ4Connect entries there by hand."
+            tr("Saved Passwords Not Removed"),
+            tr("The profile was deleted, but its saved passwords could not be removed from the "
+               "system credential store. Remove the EZ4Connect entries there by hand.")
         );
     }
     if (!ApplicationPaths::removeProfileData(removedProfileId))
@@ -1021,8 +1056,8 @@ void MainWindow::deleteCurrentProfile()
         qWarning().noquote() << "Could not remove login data of the deleted profile: " + removedProfileId;
         QMessageBox::warning(
             this,
-            "Login Data Not Removed",
-            "The profile was deleted, but its login data could not be removed."
+            tr("Login Data Not Removed"),
+            tr("The profile was deleted, but its login data could not be removed.")
         );
     }
 
@@ -1049,16 +1084,16 @@ void MainWindow::upgradeSettings()
     {
         QMessageBox::warning(
             this,
-            "Profile From a Newer Version",
-            "This profile was saved by a newer version of EZ4Connect. It is used as it is, "
-            "but settings this version does not know are ignored."
+            tr("Profile From a Newer Version"),
+            tr("This profile was saved by a newer version of EZ4Connect. It is used as it is, "
+               "but settings this version does not know are ignored.")
         );
     }
     else if (action == SettingsMigrationAction::RecommendReset)
     {
         QMessageBox msgBox;
-        msgBox.setText("Configuration Format Updated");
-        msgBox.setInformativeText("Restoring the default settings is recommended to use the improved configuration.\n\nRestore the defaults?");
+        msgBox.setText(tr("Configuration Format Updated"));
+        msgBox.setInformativeText(tr("Restoring the default settings is recommended to use the improved configuration.\n\nRestore the defaults?"));
         msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Cancel);
 
@@ -1067,7 +1102,7 @@ void MainWindow::upgradeSettings()
         ProfileSettings::migrateSecrets(*settings);
         if (reset)
         {
-            QMessageBox::information(this, "Done", "Default settings restored.");
+            QMessageBox::information(this, tr("Done"), tr("Default settings restored."));
         }
         return;
     }
@@ -1078,10 +1113,13 @@ void MainWindow::upgradeSettings()
 void MainWindow::updateVersionInfo()
 {
     const VersionInfo &versionInfo = updateChecker->versionInfo();
-    ui->versionLabel->setText("Version " + versionInfo.uiVersion);
+    ui->versionLabel->setText(tr("Version %1").arg(versionInfo.uiVersion));
     ui->versionLabel->setToolTip(
-        "UI version: " + versionInfo.uiVersion + " (latest: " + versionInfo.uiLatest + ")\n"
-        "Core version: " + versionInfo.coreVersion + " (latest: " + versionInfo.coreLatest + ")"
+        tr("UI version: %1 (latest: %2)\nCore version: %3 (latest: %4)")
+            .arg(UpdateChecker::displayValue(versionInfo.uiVersion),
+                 UpdateChecker::displayValue(versionInfo.uiLatest),
+                 UpdateChecker::displayValue(versionInfo.coreVersion),
+                 UpdateChecker::displayValue(versionInfo.coreLatest))
     );
     updateProfileSummary();
 }

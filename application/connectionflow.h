@@ -82,6 +82,7 @@ signals:
     void failed(const QString &message);
     // Whether turning the system proxy on makes sense right now.
     void proxyControlAvailableChanged(bool available);
+    // In the interface language; the log gets the English wording.
     void proxyFailed(const QString &error);
 
 private:

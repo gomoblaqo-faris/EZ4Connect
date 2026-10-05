@@ -1,5 +1,6 @@
 #include "sudowindow.h"
 
+#include <QEvent>
 #include <QPushButton>
 #include <QKeyEvent>
 
@@ -41,4 +42,13 @@ void SudoWindow::keyPressEvent(QKeyEvent *event)
 		reject();
 	else
 		QDialog::keyPressEvent(event);
+}
+
+void SudoWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+    }
+    QDialog::changeEvent(event);
 }

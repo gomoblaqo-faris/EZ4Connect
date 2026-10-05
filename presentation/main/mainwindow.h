@@ -55,6 +55,12 @@ private:
 
     void resetZjuConnectUi();
 
+    // Puts the text set from code back in the current language, after the
+    // form's own text has been retranslated.
+    void retranslate();
+
+    void updateProxyButtonText();
+
     bool profileDialogIsOpen() const;
 
     void applyColorScheme(Qt::ColorScheme scheme);
@@ -109,7 +115,7 @@ private:
     ConnectionSession *connectionSession = nullptr;
     SystemProxySession *systemProxySession = nullptr;
     AuthDialogCoordinator *authenticationDialogs = nullptr;
-    ConnectionUiController *connectionUiController;
+    ConnectionUiController *connectionUiController = nullptr;
     MainWindowCoordinator *coordinator;
     ApplicationLogger *applicationLogger;
     ApplicationLogFile *applicationLogFile;

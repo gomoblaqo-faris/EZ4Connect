@@ -2,6 +2,7 @@
 
 #include "presentation/presentationhelpers.h"
 
+#include <QEvent>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QKeyEvent>
@@ -55,4 +56,13 @@ void LoginWindow::keyPressEvent(QKeyEvent *event)
 		reject();
 	else
 		QDialog::keyPressEvent(event);
+}
+
+void LoginWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+    }
+    QDialog::changeEvent(event);
 }

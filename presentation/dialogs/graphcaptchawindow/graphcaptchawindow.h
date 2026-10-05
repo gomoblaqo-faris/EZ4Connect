@@ -24,6 +24,9 @@ public slots:
     void accept() override;
     void reject() override;
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
     Ui::GraphCaptchaWindow *ui;
     MainWindow *mainWindow = nullptr;

@@ -546,9 +546,6 @@ App config version: ?</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
-            <property name="text">
-             <string/>
-            </property>
             <property name="placeholderText">
              <string>Optional; CAS/OAuth2 only</string>
             </property>
@@ -627,9 +624,6 @@ App config version: ?</string>
               <horstretch>1</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
             </property>
             <property name="placeholderText">
              <string>Can be fetched automatically; default: local</string>

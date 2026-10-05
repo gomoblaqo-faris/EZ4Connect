@@ -28,8 +28,9 @@ signals:
     void busyChanged(bool busy);
     void conflictCheckFinished(bool conflict);
     void operationFinished(bool enabled);
-    // Emitted after operationFinished when enabling or clearing did not work.
-    void operationFailed(const QString &error);
+    // Emitted after operationFinished when enabling or clearing did not work:
+    // the error in English, for the log, and in the interface language.
+    void operationFailed(const QString &error, const QString &translatedError);
 
 private:
     enum class Operation
@@ -49,6 +50,7 @@ private:
         // settings may still point at the proxy.
         bool leftPartiallyApplied = false;
         QString error;
+        QString translatedError;
     };
 
     bool startOperation(Operation operation, const SystemProxyConfig &config = {});

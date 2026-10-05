@@ -21,6 +21,12 @@ public:
 
     ~SettingWindow() override;
 
+protected:
+    void changeEvent(QEvent *event) override;
+
+private:
+    void updateConfigVersionLabel();
+
 private:
     void loadSettings();
     void applySettings();

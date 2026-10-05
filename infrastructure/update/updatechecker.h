@@ -32,6 +32,11 @@ public:
     explicit UpdateChecker(QObject *parent = nullptr);
 
     const VersionInfo &versionInfo() const;
+
+    // A version field holds either a version number or a status word such
+    // as "checking". The words are stored in English and translated only
+    // when shown, so that they follow a change of language.
+    static QString displayValue(const QString &value);
     void markDisabled();
     void check();
 

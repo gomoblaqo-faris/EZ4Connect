@@ -17,6 +17,9 @@ public:
 signals:
 	void sudo(const QString& password, bool save);
 
+protected:
+	void changeEvent(QEvent *event) override;
+
 private:
 	Ui::SudoWindow *ui;
 };

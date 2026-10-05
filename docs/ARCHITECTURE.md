@@ -39,7 +39,8 @@ implementations are created and injected by each front end's composition root:
 - `AuthPrompter` → `AuthDialogCoordinator` (dialogs) or `TerminalPrompter` (terminal)
 
 Platform code reports failures to its caller as an `OperationStatus`. Only `presentation` shows
-dialogs.
+dialogs. A failure carries two wordings (`Wording`): English, for the log and the command-line
+client, and the interface language, for the dialog that shows it.
 
 ## Main flows
 

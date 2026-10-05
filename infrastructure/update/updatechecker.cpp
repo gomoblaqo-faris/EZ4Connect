@@ -128,9 +128,9 @@ UpdateChecker::UpdateChecker(QObject *parent)
     : QObject(parent),
       versions{
           QCoreApplication::applicationVersion(),
-          QStringLiteral("checking"),
-          QStringLiteral("unknown"),
-          QStringLiteral("checking")
+          QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "checking")),
+          QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "unknown")),
+          QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "checking"))
       },
       uiNetworkManager(new QNetworkAccessManager(this)),
       coreNetworkManager(new QNetworkAccessManager(this))
@@ -146,10 +146,16 @@ const VersionInfo &UpdateChecker::versionInfo() const
     return versions;
 }
 
+QString UpdateChecker::displayValue(const QString &value)
+{
+    // A version number has no translation and comes back unchanged.
+    return tr(value.toUtf8().constData());
+}
+
 void UpdateChecker::markDisabled()
 {
-    versions.uiLatest = QStringLiteral("disabled");
-    versions.coreLatest = QStringLiteral("disabled");
+    versions.uiLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "disabled"));
+    versions.coreLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "disabled"));
     emit versionInfoChanged(versions);
 }
 
@@ -163,7 +169,7 @@ void UpdateChecker::check()
     catch (const std::runtime_error &error)
     {
         qWarning().noquote() << "Core version check failed: " + QString(error.what());
-        versions.coreVersion = QStringLiteral("error");
+        versions.coreVersion = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "error"));
     }
     emit versionInfoChanged(versions);
 
@@ -244,7 +250,7 @@ void UpdateChecker::handleUiReply(QNetworkReply *reply)
     {
         const QString reason = reply->errorString();
         qWarning().noquote() << "UI update check failed: " + reason;
-        versions.uiLatest = QStringLiteral("check failed");
+        versions.uiLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "check failed"));
         reply->deleteLater();
         emit checkFailed(UpdateComponent::Ui, reason);
         emit versionInfoChanged(versions);
@@ -259,7 +265,7 @@ void UpdateChecker::handleUiReply(QNetworkReply *reply)
         const QString reason =
             QStringLiteral("the response has no valid version tag");
         qWarning().noquote() << "UI update check failed: " + reason;
-        versions.uiLatest = QStringLiteral("check failed");
+        versions.uiLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "check failed"));
         emit checkFailed(UpdateComponent::Ui, reason);
         emit versionInfoChanged(versions);
         return;
@@ -282,7 +288,7 @@ void UpdateChecker::handleCoreReply(QNetworkReply *reply)
     {
         const QString reason = reply->errorString();
         qWarning().noquote() << "Core update check failed: " + reason;
-        versions.coreLatest = QStringLiteral("check failed");
+        versions.coreLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "check failed"));
         reply->deleteLater();
         emit checkFailed(UpdateComponent::Core, reason);
         emit versionInfoChanged(versions);
@@ -297,7 +303,7 @@ void UpdateChecker::handleCoreReply(QNetworkReply *reply)
         const QString reason =
             QStringLiteral("the response has no valid version tag");
         qWarning().noquote() << "Core update check failed: " + reason;
-        versions.coreLatest = QStringLiteral("check failed");
+        versions.coreLatest = QString::fromLatin1(QT_TRANSLATE_NOOP("UpdateChecker", "check failed"));
         emit checkFailed(UpdateComponent::Core, reason);
         emit versionInfoChanged(versions);
         return;

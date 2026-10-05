@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QTranslator>
 #include <QWidget>
 
 #include <atomic>
@@ -92,8 +93,10 @@ public:
     {
         calls->lastHttpPort = config.httpPort;
         ++calls->applies;
+        // Worded both ways, as the platform code words it: English for the
+        // log, the interface language for the dialog.
         return calls->failApply
-            ? OperationStatus::failure("apply failed")
+            ? OperationStatus::failure(Wording{"apply failed", "apply failed, translated"})
             : OperationStatus();
     }
 
@@ -383,21 +386,43 @@ bool appliesAutomaticProxyOnceABusySessionIsFree()
     return true;
 }
 
+QStringList loggedWarnings;
+
+void recordWarning(QtMsgType type, const QMessageLogContext &, const QString &message)
+{
+    if (type == QtWarningMsg)
+    {
+        loggedWarnings.append(message);
+    }
+}
+
 bool reportsAProxyThatCouldNotBeSetAndDoesNotRetryIt()
 {
     Fixture fixture(true, true);
     fixture.proxyCalls.failApply = true;
+    loggedWarnings.clear();
+    const QtMessageHandler previousHandler = qInstallMessageHandler(recordWarning);
     fixture.connectButton.click();
     fixture.coreProcess->establishConnection();
-    if (!waitFor([&]() { return dialogMessages.contains("apply failed"); }, 5000)
+    const bool reported =
+        waitFor([&]() { return dialogMessages.contains("apply failed, translated"); }, 5000);
+    qInstallMessageHandler(previousHandler);
+    if (!reported
         || fixture.proxySession.isEnabled()
         || fixture.proxyCalls.clears != 1)
     {
         qCritical() << "a failed proxy was not reported and rolled back:" << dialogMessages;
         return false;
     }
+    // The dialog shows the translation, the log keeps the English.
+    if (!loggedWarnings.contains("apply failed")
+        || loggedWarnings.contains("apply failed, translated"))
+    {
+        qCritical() << "the log did not get the English wording:" << loggedWarnings;
+        return false;
+    }
     // Remove only the expected dialog, so any other one still fails the run.
-    if (dialogMessages.removeAll("apply failed") != 1)
+    if (dialogMessages.removeAll("apply failed, translated") != 1)
     {
         qCritical() << "the proxy failure was reported more than once";
         return false;
@@ -435,6 +460,47 @@ bool notifiesWhenEstablishedConnectionDropsSilently()
                     << fixture.notifications;
         return false;
     }
+    return true;
+}
+
+// Translates every string into upper case, so a change of language shows.
+class UpperCaseTranslator : public QTranslator
+{
+public:
+    QString translate(const char *, const char *sourceText, const char *, int) const override
+    {
+        return QString::fromUtf8(sourceText).toUpper();
+    }
+
+    bool isEmpty() const override
+    {
+        return false;
+    }
+};
+
+bool keepsTheConnectionStateWhenTheLanguageChanges()
+{
+    Fixture fixture(false);
+    fixture.connectButton.click();
+    fixture.coreProcess->establishConnection();
+
+    UpperCaseTranslator translator;
+    QCoreApplication::installTranslator(&translator);
+    fixture.controller.retranslate();
+    const QString translatedButton = fixture.connectButton.text();
+    const QString translatedTray = fixture.trayAction.text();
+    QCoreApplication::removeTranslator(&translator);
+    fixture.controller.retranslate();
+
+    if (translatedButton != "DISCONNECT" || translatedTray != "DISCONNECT"
+        || fixture.connectButton.text() != "Disconnect")
+    {
+        qCritical() << "the connect button lost its state across a language change:"
+                    << translatedButton << translatedTray << fixture.connectButton.text();
+        return false;
+    }
+    fixture.connectButton.click();
+    fixture.coreProcess->complete();
     return true;
 }
 
@@ -490,7 +556,8 @@ int main(int argc, char *argv[])
         && appliesAutomaticProxyOnceABusySessionIsFree()
         && reportsAProxyThatCouldNotBeSetAndDoesNotRetryIt()
         && notifiesWhenEstablishedConnectionDropsSilently()
-        && requestedDisconnectIsNotReportedAsFailure();
+        && requestedDisconnectIsNotReportedAsFailure()
+        && keepsTheConnectionStateWhenTheLanguageChanges();
     if (!dialogMessages.isEmpty())
     {
         qCritical() << "unexpected dialogs:" << dialogMessages;

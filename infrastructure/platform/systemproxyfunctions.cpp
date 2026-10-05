@@ -1,8 +1,11 @@
+#include <QCoreApplication>
 #include <QDebug>
 #include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 #include "systemproxyfunctions.h"
+
+#include "application/wording.h"
 
 #if defined(Q_OS_WINDOWS)
 #include "windows.h"
@@ -12,6 +15,27 @@
 #endif
 
 const QString macOSNetworkSetupPath = "/usr/sbin/networksetup";
+
+namespace
+{
+// The source text is marked with QT_TRANSLATE_NOOP("SystemProxy", ...) where it is
+// written, so that lupdate finds it.
+template <typename... Arguments>
+Wording text(const char *source, const Arguments &...arguments)
+{
+    return Wording::of("SystemProxy", source, arguments...);
+}
+
+// A failure with what the system said about it, which is not translated.
+// Only the macOS code adds such details.
+[[maybe_unused]] OperationStatus failedWith(const Wording &failure, const QString &details)
+{
+    return OperationStatus::failure(Wording{
+        failure.english + QStringLiteral(": ") + details,
+        QCoreApplication::translate("SystemProxy", "%1: %2").arg(failure.translated, details)
+    });
+}
+}
 
 #if defined(Q_OS_WINDOWS)
 // Applications that are already running keep using the old settings until
@@ -55,7 +79,8 @@ OperationStatus windowsSetProxyForAllConnections(const QString &proxyServer, con
     if (!InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize))
     {
         status = OperationStatus::failure(
-            QString("InternetSetOption failed with error %1").arg(GetLastError())
+            text(QT_TRANSLATE_NOOP("SystemProxy", "InternetSetOption failed with error %1"),
+                 QString::number(GetLastError()))
         );
     }
 
@@ -124,7 +149,8 @@ OperationStatus windowsClearProxyForAllConnections()
     if (!InternetSetOption(nullptr, INTERNET_OPTION_PER_CONNECTION_OPTION, &optionList, optionListSize))
     {
         status = OperationStatus::failure(
-            QString("InternetSetOption failed with error %1").arg(GetLastError())
+            text(QT_TRANSLATE_NOOP("SystemProxy", "InternetSetOption failed with error %1"),
+                 QString::number(GetLastError()))
         );
     }
 
@@ -164,7 +190,7 @@ OperationStatus windowsClearProxyForAllConnections()
 
 OperationStatus runNetworkSetup(
     const QStringList &arguments,
-    const QString &failure,
+    const Wording &failure,
     QString *output = nullptr
 )
 {
@@ -173,7 +199,7 @@ OperationStatus runNetworkSetup(
     process.waitForFinished();
     if (process.error() != QProcess::UnknownError)
     {
-        return OperationStatus::failure(failure + ": " + process.errorString());
+        return failedWith(failure, process.errorString());
     }
     if (process.exitCode() != 0)
     {
@@ -181,7 +207,7 @@ OperationStatus runNetworkSetup(
         const QString details = QString::fromLocal8Bit(
             process.readAllStandardError() + process.readAllStandardOutput()
         ).trimmed();
-        return OperationStatus::failure(failure + ": " + details);
+        return failedWith(failure, details);
     }
     if (output != nullptr)
     {
@@ -195,7 +221,7 @@ OperationStatus macOSGetActiveNetworkServices(QStringList *activeServices)
     QString output;
     const OperationStatus status = runNetworkSetup(
         {"-listallnetworkservices"},
-        "Could not list network services",
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not list network services")),
         &output
     );
     if (!status.succeeded)
@@ -252,7 +278,7 @@ bool macOSIsSystemProxySet(macOSProxyType proxyType, const QString networkServic
     QString output;
     const OperationStatus status = runNetworkSetup(
         args,
-        "Could not read system proxy settings",
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not read system proxy settings")),
         &output
     );
     if (!status.succeeded)
@@ -292,7 +318,7 @@ OperationStatus macOSSetSystemProxy(macOSProxyType proxyType, const QString &net
     setArgs << networkService << proxyServer << QString::number(port);
     const OperationStatus status = runNetworkSetup(
         setArgs,
-        "Could not set the system proxy for " + networkService
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not set the system proxy for %1"), networkService)
     );
     if (!status.succeeded)
     {
@@ -301,7 +327,7 @@ OperationStatus macOSSetSystemProxy(macOSProxyType proxyType, const QString &net
     enableArgs << networkService << "on";
     return runNetworkSetup(
         enableArgs,
-        "Could not enable the system proxy for " + networkService
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not enable the system proxy for %1"), networkService)
     );
 }
 
@@ -323,7 +349,7 @@ OperationStatus macOSDisableSystemProxy(macOSProxyType proxyType, const QString 
     args << networkService << "off";
     return runNetworkSetup(
         args,
-        "Could not disable the system proxy for " + networkService
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not disable the system proxy for %1"), networkService)
     );
 }
 
@@ -354,7 +380,7 @@ OperationStatus macOSSetProxyBypass(const QString &networkService, const QString
     args << macOSProxyBypassDomains(bypass);
     return runNetworkSetup(
         args,
-        "Could not set proxy bypass domains for " + networkService
+        text(QT_TRANSLATE_NOOP("SystemProxy", "Could not set proxy bypass domains for %1"), networkService)
     );
 }
 
@@ -366,7 +392,7 @@ struct LinuxProxyCommand
     bool required;
 };
 
-OperationStatus runLinuxProxyCommands(const QList<LinuxProxyCommand> &commands, const QString &failure)
+OperationStatus runLinuxProxyCommands(const QList<LinuxProxyCommand> &commands, const Wording &failure)
 {
     // Run every command even after a failure, so the desktop is left as close
     // to the requested state as possible.
@@ -384,7 +410,11 @@ OperationStatus runLinuxProxyCommands(const QList<LinuxProxyCommand> &commands, 
     {
         return {};
     }
-    return OperationStatus::failure(failure + ": " + failedPrograms.join(", ") + " failed");
+    const QString programs = failedPrograms.join(QStringLiteral(", "));
+    return OperationStatus::failure(Wording{
+        failure.english + QStringLiteral(": ") + programs + QStringLiteral(" failed"),
+        QCoreApplication::translate("SystemProxy", "%1: %2 failed").arg(failure.translated, programs)
+    });
 }
 
 bool linuxSessionIsKDE()
@@ -465,7 +495,7 @@ OperationStatus linuxSetSystemProxy(const QString &proxyServer, int httpPort, in
                                       false};
     }
 
-    return runLinuxProxyCommands(commands, "Could not set the system proxy");
+    return runLinuxProxyCommands(commands, text(QT_TRANSLATE_NOOP("SystemProxy", "Could not set the system proxy")));
 }
 
 OperationStatus linuxClearSystemProxy()
@@ -492,7 +522,7 @@ OperationStatus linuxClearSystemProxy()
                                       false};
     }
 
-    return runLinuxProxyCommands(commands, "Could not clear the system proxy");
+    return runLinuxProxyCommands(commands, text(QT_TRANSLATE_NOOP("SystemProxy", "Could not clear the system proxy")));
 }
 
 bool linuxIsSystemProxySet(int http_port, int socks_port)
@@ -614,7 +644,7 @@ OperationStatus PlatformSystemProxy::set(int http_port, int socks_port, const QS
     }
     if (activeServices.isEmpty())
     {
-        return OperationStatus::failure("Could not set the system proxy: no active network service was found");
+        return OperationStatus::failure(text(QT_TRANSLATE_NOOP("SystemProxy", "Could not set the system proxy: no active network service was found")));
     }
     for (const QString &service : activeServices)
     {
@@ -643,7 +673,7 @@ OperationStatus PlatformSystemProxy::set(int http_port, int socks_port, const QS
     Q_UNUSED(http_port)
     Q_UNUSED(socks_port)
     Q_UNUSED(bypass)
-    return OperationStatus::failure("Setting the system proxy is not supported on this platform");
+    return OperationStatus::failure(text(QT_TRANSLATE_NOOP("SystemProxy", "Setting the system proxy is not supported on this platform")));
 #endif
 }
 
@@ -678,6 +708,6 @@ OperationStatus PlatformSystemProxy::clear()
 #elif defined(Q_OS_LINUX)
     return linuxClearSystemProxy();
 #else
-    return OperationStatus::failure("Clearing the system proxy is not supported on this platform");
+    return OperationStatus::failure(text(QT_TRANSLATE_NOOP("SystemProxy", "Clearing the system proxy is not supported on this platform")));
 #endif
 }

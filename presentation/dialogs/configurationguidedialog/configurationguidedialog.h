@@ -4,6 +4,8 @@
 #include <QDialog>
 #include <QString>
 
+class QCheckBox;
+class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -24,6 +26,9 @@ public:
     );
 
     void applyTo(QSettings &settings) const;
+
+protected:
+    void changeEvent(QEvent *event) override;
 
 private slots:
     void goBack();
@@ -59,6 +64,11 @@ private:
 
     QString authenticationMethodName(const QString &authType) const;
 
+    // Sets every text in the guide in the current language.
+    void retranslate();
+
+    void updateSelectedAuthentication();
+
     const QSettings *sourceSettings;
 
     QLabel *stepLabel;
@@ -70,11 +80,18 @@ private:
 
     QLineEdit *serverAddressLineEdit;
     QSpinBox *serverPortSpinBox;
+    QLabel *serverAddressLabel;
+    QLabel *serverPortLabel;
 
+    QGroupBox *protocolGroup;
     QRadioButton *atrustRadioButton;
+    QLabel *atrustDescription;
     QRadioButton *easyconnectRadioButton;
+    QLabel *easyconnectDescription;
 
     QStackedWidget *authenticationPages;
+    QLabel *atrustInfo;
+    QLabel *certificateHint;
     QLabel *selectedAuthenticationLabel;
     QPushButton *fetchAuthenticationButton;
     QRadioButton *passwordAuthenticationRadioButton;
@@ -89,6 +106,23 @@ private:
     QLineEdit *certificateFileLineEdit;
     QLineEdit *certificatePasswordLineEdit;
     QLineEdit *certificateTotpSecretLineEdit;
+
+    QGroupBox *passwordGroup;
+    QLabel *usernameLabel;
+    QLabel *passwordLabel;
+    QLabel *totpLabel;
+    QCheckBox *showPasswordCheckBox;
+    QCheckBox *showTotpCheckBox;
+    QGroupBox *phoneGroup;
+    QLabel *phoneLabel;
+    QGroupBox *certificateGroup;
+    QLabel *certificateFileLabel;
+    QLabel *certificatePasswordLabel;
+    QLabel *certificateTotpLabel;
+    QPushButton *browseCertificateButton;
+    QCheckBox *showCertificatePasswordCheckBox;
+    QCheckBox *showCertificateTotpCheckBox;
+    QLabel *ssoLabel;
 
     QString selectedAuthType;
     QString selectedLoginDomain;

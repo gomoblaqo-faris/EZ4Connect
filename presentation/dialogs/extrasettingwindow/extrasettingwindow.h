@@ -23,6 +23,9 @@ public:
 signals:
     void applied(const QString &tcpPortForwarding, const QString &udpPortForwarding, const QString& customDns, const QString& customProxyDomains, const QString& extraArguments);
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
     Ui::ExtraSettingWindow *ui;
 };

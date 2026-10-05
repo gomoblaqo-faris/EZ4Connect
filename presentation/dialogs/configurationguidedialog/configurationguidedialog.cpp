@@ -2,6 +2,7 @@
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QFont>
@@ -43,7 +44,6 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     : QDialog(parent),
       sourceSettings(settings)
 {
-    setWindowTitle("Setup Guide");
     setWindowModality(Qt::WindowModal);
     setMinimumSize(520, 340);
 
@@ -71,8 +71,8 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     layout->addWidget(pages, 1);
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    backButton = buttonBox->addButton("Back", QDialogButtonBox::ActionRole);
-    nextButton = buttonBox->addButton("Next", QDialogButtonBox::AcceptRole);
+    backButton = buttonBox->addButton(QString(), QDialogButtonBox::ActionRole);
+    nextButton = buttonBox->addButton(QString(), QDialogButtonBox::AcceptRole);
     layout->addWidget(buttonBox);
 
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -129,7 +129,73 @@ ConfigurationGuideDialog::ConfigurationGuideDialog(
     );
     certificatePasswordLineEdit->setText(loadedCertPassword);
 
+    retranslate();
     updateProtocolPage();
+}
+
+void ConfigurationGuideDialog::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        retranslate();
+    }
+    QDialog::changeEvent(event);
+}
+
+void ConfigurationGuideDialog::retranslate()
+{
+    setWindowTitle(tr("Setup Guide"));
+    backButton->setText(tr("Back"));
+
+    protocolGroup->setTitle(tr("Server Protocol"));
+    atrustDescription->setText(
+        tr("For newer Sangfor aTrust servers. Authentication methods can be fetched from the server.")
+    );
+    easyconnectDescription->setText(tr("For legacy EasyConnect servers."));
+
+    serverAddressLabel->setText(tr("Server address"));
+    serverAddressLineEdit->setPlaceholderText(tr("e.g. vpn.example.edu.cn"));
+    serverPortLabel->setText(tr("Server port"));
+
+    atrustInfo->setText(
+        tr("Fetch the available authentication methods from the server, then choose the one that matches your account.")
+    );
+    passwordAuthenticationRadioButton->setText(tr("Username and password"));
+    certificateAuthenticationRadioButton->setText(tr("Certificate"));
+    certificateHint->setText(
+        tr("With certificate authentication, the next step asks for the certificate file and password.")
+    );
+
+    passwordGroup->setTitle(tr("Account Credentials"));
+    usernameLabel->setText(tr("Account"));
+    usernameLineEdit->setPlaceholderText(tr("VPN account"));
+    passwordLabel->setText(tr("Password"));
+    passwordLineEdit->setPlaceholderText(tr("VPN password"));
+    totpLabel->setText(tr("TOTP secret"));
+    totpSecretLineEdit->setPlaceholderText(tr("Optional: TOTP authenticator secret"));
+    phoneGroup->setTitle(tr("Phone Number for SMS Verification"));
+    phoneLabel->setText(tr("Phone"));
+    phoneNumberLineEdit->setPlaceholderText(tr("Phone number"));
+    certificateGroup->setTitle(tr("Certificate Credentials"));
+    certificateFileLabel->setText(tr("Certificate file"));
+    certificateFileLineEdit->setPlaceholderText(tr("P12 or PFX certificate file"));
+    browseCertificateButton->setText(tr("Browse..."));
+    certificatePasswordLabel->setText(tr("Certificate password"));
+    certificatePasswordLineEdit->setPlaceholderText(tr("Optional: certificate password"));
+    certificateTotpLabel->setText(tr("TOTP secret"));
+    certificateTotpSecretLineEdit->setPlaceholderText(tr("Optional: TOTP authenticator secret"));
+    for (QCheckBox *showCheckBox : {showPasswordCheckBox,
+                                    showTotpCheckBox,
+                                    showCertificatePasswordCheckBox,
+                                    showCertificateTotpCheckBox})
+    {
+        showCheckBox->setText(tr("Show"));
+    }
+    ssoLabel->setText(
+        tr("This method opens a login page when connecting, so no credentials are needed in advance.")
+    );
+
+    updateSelectedAuthentication();
     updateNavigation();
 }
 
@@ -182,18 +248,19 @@ QWidget *ConfigurationGuideDialog::createServerPage()
     formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     serverAddressLineEdit = new QLineEdit(page);
-    serverAddressLineEdit->setPlaceholderText("e.g. vpn.example.edu.cn");
     serverAddressLineEdit->setText(
         ProfileSettings::read(*sourceSettings, ProfileSettings::ServerAddress)
     );
-    formLayout->addRow("Server address", serverAddressLineEdit);
+    serverAddressLabel = new QLabel(page);
+    formLayout->addRow(serverAddressLabel, serverAddressLineEdit);
 
     serverPortSpinBox = new QSpinBox(page);
     serverPortSpinBox->setRange(1, 65535);
     serverPortSpinBox->setValue(
         ProfileSettings::read(*sourceSettings, ProfileSettings::ServerPort)
     );
-    formLayout->addRow("Server port", serverPortSpinBox);
+    serverPortLabel = new QLabel(page);
+    formLayout->addRow(serverPortLabel, serverPortSpinBox);
 
     pageLayout->addLayout(formLayout);
     pageLayout->addStretch();
@@ -205,21 +272,15 @@ QWidget *ConfigurationGuideDialog::createProtocolPage()
     auto *page = new QWidget(this);
     auto *pageLayout = new QVBoxLayout(page);
 
-    auto *protocolGroup = new QGroupBox("Server Protocol", page);
+    protocolGroup = new QGroupBox(page);
     auto *protocolLayout = new QVBoxLayout(protocolGroup);
 
-    atrustRadioButton = new QRadioButton("aTrust", protocolGroup);
-    auto *atrustDescription = new QLabel(
-        "For newer Sangfor aTrust servers. Authentication methods can be fetched from the server.",
-        protocolGroup
-    );
+    atrustRadioButton = new QRadioButton(QStringLiteral("aTrust"), protocolGroup);
+    atrustDescription = new QLabel(protocolGroup);
     atrustDescription->setWordWrap(true);
 
-    easyconnectRadioButton = new QRadioButton("EasyConnect", protocolGroup);
-    auto *easyconnectDescription = new QLabel(
-        "For legacy EasyConnect servers.",
-        protocolGroup
-    );
+    easyconnectRadioButton = new QRadioButton(QStringLiteral("EasyConnect"), protocolGroup);
+    easyconnectDescription = new QLabel(protocolGroup);
     easyconnectDescription->setWordWrap(true);
 
     protocolLayout->addWidget(atrustRadioButton);
@@ -249,14 +310,11 @@ QWidget *ConfigurationGuideDialog::createAuthenticationPage()
 
     auto *atrustPage = new QWidget(authenticationPages);
     auto *atrustLayout = new QVBoxLayout(atrustPage);
-    auto *atrustInfo = new QLabel(
-        "Fetch the available authentication methods from the server, then choose the one that matches your account.",
-        atrustPage
-    );
+    atrustInfo = new QLabel(atrustPage);
     atrustInfo->setWordWrap(true);
     selectedAuthenticationLabel = new QLabel(atrustPage);
     selectedAuthenticationLabel->setWordWrap(true);
-    fetchAuthenticationButton = new QPushButton("Fetch Authentication Methods", atrustPage);
+    fetchAuthenticationButton = new QPushButton(atrustPage);
     atrustLayout->addWidget(atrustInfo);
     atrustLayout->addWidget(selectedAuthenticationLabel);
     atrustLayout->addWidget(fetchAuthenticationButton, 0, Qt::AlignLeft);
@@ -265,18 +323,9 @@ QWidget *ConfigurationGuideDialog::createAuthenticationPage()
 
     auto *easyconnectPage = new QWidget(authenticationPages);
     auto *easyconnectLayout = new QVBoxLayout(easyconnectPage);
-    passwordAuthenticationRadioButton = new QRadioButton(
-        "Username and password",
-        easyconnectPage
-    );
-    certificateAuthenticationRadioButton = new QRadioButton(
-        "Certificate",
-        easyconnectPage
-    );
-    auto *certificateHint = new QLabel(
-        "With certificate authentication, the next step asks for the certificate file and password.",
-        easyconnectPage
-    );
+    passwordAuthenticationRadioButton = new QRadioButton(easyconnectPage);
+    certificateAuthenticationRadioButton = new QRadioButton(easyconnectPage);
+    certificateHint = new QLabel(easyconnectPage);
     certificateHint->setWordWrap(true);
     easyconnectLayout->addWidget(passwordAuthenticationRadioButton);
     easyconnectLayout->addWidget(certificateAuthenticationRadioButton);
@@ -310,14 +359,14 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
 
     auto *passwordPage = new QWidget(credentialPages);
     auto *passwordPageLayout = new QVBoxLayout(passwordPage);
-    auto *passwordGroup = new QGroupBox("Account Credentials", passwordPage);
+    passwordGroup = new QGroupBox(passwordPage);
     auto *passwordForm = new QFormLayout(passwordGroup);
     passwordForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
     usernameLineEdit = new QLineEdit(passwordGroup);
     usernameLineEdit->setObjectName("guideUsernameLineEdit");
-    usernameLineEdit->setPlaceholderText("VPN account");
-    passwordForm->addRow("Account", usernameLineEdit);
+    usernameLabel = new QLabel(passwordGroup);
+    passwordForm->addRow(usernameLabel, usernameLineEdit);
 
     auto *passwordRow = new QWidget(passwordGroup);
     auto *passwordRowLayout = new QHBoxLayout(passwordRow);
@@ -325,11 +374,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     passwordLineEdit = new QLineEdit(passwordRow);
     passwordLineEdit->setObjectName("guidePasswordLineEdit");
     passwordLineEdit->setEchoMode(QLineEdit::Password);
-    passwordLineEdit->setPlaceholderText("VPN password");
-    auto *showPasswordCheckBox = new QCheckBox("Show", passwordRow);
+    showPasswordCheckBox = new QCheckBox(passwordRow);
     passwordRowLayout->addWidget(passwordLineEdit, 1);
     passwordRowLayout->addWidget(showPasswordCheckBox);
-    passwordForm->addRow("Password", passwordRow);
+    passwordLabel = new QLabel(passwordGroup);
+    passwordForm->addRow(passwordLabel, passwordRow);
 
     auto *totpRow = new QWidget(passwordGroup);
     auto *totpRowLayout = new QHBoxLayout(totpRow);
@@ -337,11 +386,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     totpSecretLineEdit = new QLineEdit(totpRow);
     totpSecretLineEdit->setObjectName("guideTotpSecretLineEdit");
     totpSecretLineEdit->setEchoMode(QLineEdit::Password);
-    totpSecretLineEdit->setPlaceholderText("Optional: TOTP authenticator secret");
-    auto *showTotpCheckBox = new QCheckBox("Show", totpRow);
+    showTotpCheckBox = new QCheckBox(totpRow);
     totpRowLayout->addWidget(totpSecretLineEdit, 1);
     totpRowLayout->addWidget(showTotpCheckBox);
-    passwordForm->addRow("TOTP secret", totpRow);
+    totpLabel = new QLabel(passwordGroup);
+    passwordForm->addRow(totpLabel, totpRow);
 
     passwordPageLayout->addWidget(passwordGroup);
     passwordPageLayout->addStretch();
@@ -349,7 +398,7 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
 
     auto *phonePage = new QWidget(credentialPages);
     auto *phonePageLayout = new QVBoxLayout(phonePage);
-    auto *phoneGroup = new QGroupBox("Phone Number for SMS Verification", phonePage);
+    phoneGroup = new QGroupBox(phonePage);
     auto *phoneForm = new QFormLayout(phoneGroup);
     phoneForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
     auto *phoneRow = new QWidget(phoneGroup);
@@ -358,14 +407,13 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     countryCodeLineEdit = new QLineEdit(phoneRow);
     countryCodeLineEdit->setObjectName("guideCountryCodeLineEdit");
     countryCodeLineEdit->setMaximumWidth(64);
-    countryCodeLineEdit->setPlaceholderText("86");
+    countryCodeLineEdit->setPlaceholderText(QStringLiteral("86"));
     countryCodeLineEdit->setValidator(new QRegularExpressionValidator(
         QRegularExpression("[0-9]{1,4}"),
         countryCodeLineEdit
     ));
     phoneNumberLineEdit = new QLineEdit(phoneRow);
     phoneNumberLineEdit->setObjectName("guidePhoneNumberLineEdit");
-    phoneNumberLineEdit->setPlaceholderText("Phone number");
     phoneNumberLineEdit->setValidator(new QRegularExpressionValidator(
         QRegularExpression("[0-9]{1,20}"),
         phoneNumberLineEdit
@@ -373,14 +421,15 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     phoneRowLayout->addWidget(new QLabel("+", phoneRow));
     phoneRowLayout->addWidget(countryCodeLineEdit);
     phoneRowLayout->addWidget(phoneNumberLineEdit, 1);
-    phoneForm->addRow("Phone", phoneRow);
+    phoneLabel = new QLabel(phoneGroup);
+    phoneForm->addRow(phoneLabel, phoneRow);
     phonePageLayout->addWidget(phoneGroup);
     phonePageLayout->addStretch();
     credentialPages->addWidget(phonePage);
 
     auto *certificatePage = new QWidget(credentialPages);
     auto *certificatePageLayout = new QVBoxLayout(certificatePage);
-    auto *certificateGroup = new QGroupBox("Certificate Credentials", certificatePage);
+    certificateGroup = new QGroupBox(certificatePage);
     auto *certificateForm = new QFormLayout(certificateGroup);
     certificateForm->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 
@@ -389,14 +438,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
     certificateFileRowLayout->setContentsMargins(0, 0, 0, 0);
     certificateFileLineEdit = new QLineEdit(certificateFileRow);
     certificateFileLineEdit->setObjectName("guideCertificateFileLineEdit");
-    certificateFileLineEdit->setPlaceholderText("P12 or PFX certificate file");
-    auto *browseCertificateButton = new QPushButton(
-        "Browse...",
-        certificateFileRow
-    );
+    browseCertificateButton = new QPushButton(certificateFileRow);
     certificateFileRowLayout->addWidget(certificateFileLineEdit, 1);
     certificateFileRowLayout->addWidget(browseCertificateButton);
-    certificateForm->addRow("Certificate file", certificateFileRow);
+    certificateFileLabel = new QLabel(certificateGroup);
+    certificateForm->addRow(certificateFileLabel, certificateFileRow);
 
     auto *certificatePasswordRow = new QWidget(certificateGroup);
     auto *certificatePasswordRowLayout = new QHBoxLayout(
@@ -408,14 +454,11 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
         "guideCertificatePasswordLineEdit"
     );
     certificatePasswordLineEdit->setEchoMode(QLineEdit::Password);
-    certificatePasswordLineEdit->setPlaceholderText("Optional: certificate password");
-    auto *showCertificatePasswordCheckBox = new QCheckBox(
-        "Show",
-        certificatePasswordRow
-    );
+    showCertificatePasswordCheckBox = new QCheckBox(certificatePasswordRow);
     certificatePasswordRowLayout->addWidget(certificatePasswordLineEdit, 1);
     certificatePasswordRowLayout->addWidget(showCertificatePasswordCheckBox);
-    certificateForm->addRow("Certificate password", certificatePasswordRow);
+    certificatePasswordLabel = new QLabel(certificateGroup);
+    certificateForm->addRow(certificatePasswordLabel, certificatePasswordRow);
 
     auto *certificateTotpRow = new QWidget(certificateGroup);
     auto *certificateTotpRowLayout = new QHBoxLayout(certificateTotpRow);
@@ -425,26 +468,18 @@ QWidget *ConfigurationGuideDialog::createCredentialsPage()
         "guideCertificateTotpSecretLineEdit"
     );
     certificateTotpSecretLineEdit->setEchoMode(QLineEdit::Password);
-    certificateTotpSecretLineEdit->setPlaceholderText(
-        "Optional: TOTP authenticator secret"
-    );
-    auto *showCertificateTotpCheckBox = new QCheckBox(
-        "Show",
-        certificateTotpRow
-    );
+    showCertificateTotpCheckBox = new QCheckBox(certificateTotpRow);
     certificateTotpRowLayout->addWidget(certificateTotpSecretLineEdit, 1);
     certificateTotpRowLayout->addWidget(showCertificateTotpCheckBox);
-    certificateForm->addRow("TOTP secret", certificateTotpRow);
+    certificateTotpLabel = new QLabel(certificateGroup);
+    certificateForm->addRow(certificateTotpLabel, certificateTotpRow);
     certificatePageLayout->addWidget(certificateGroup);
     certificatePageLayout->addStretch();
     credentialPages->addWidget(certificatePage);
 
     auto *ssoPage = new QWidget(credentialPages);
     auto *ssoPageLayout = new QVBoxLayout(ssoPage);
-    auto *ssoLabel = new QLabel(
-        "This method opens a login page when connecting, so no credentials are needed in advance.",
-        ssoPage
-    );
+    ssoLabel = new QLabel(ssoPage);
     ssoLabel->setWordWrap(true);
     ssoPageLayout->addWidget(ssoLabel);
     ssoPageLayout->addStretch();
@@ -570,9 +605,9 @@ void ConfigurationGuideDialog::browseCertificateFile()
 {
     const QString fileName = QFileDialog::getOpenFileName(
         this,
-        "Choose a Certificate File",
+        tr("Choose a Certificate File"),
         QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-        "P12 Certificate (*.p12 *.pfx);;All Files (*)"
+        tr("P12 certificates (*.p12 *.pfx);;All files (*)")
     );
     if (!fileName.isEmpty())
     {
@@ -602,7 +637,7 @@ bool ConfigurationGuideDialog::validateCurrentPage()
     {
         if (serverAddressLineEdit->text().trimmed().isEmpty())
         {
-            QMessageBox::warning(this, "Invalid Server Address", "The server address is required.");
+            QMessageBox::warning(this, tr("Invalid Server Address"), tr("The server address is required."));
             return false;
         }
     }
@@ -612,8 +647,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "No Authentication Method Selected",
-                "Fetch and choose an authentication method supported by the server first."
+                tr("No Authentication Method Selected"),
+                tr("Fetch and choose an authentication method supported by the server first.")
             );
             return false;
         }
@@ -626,8 +661,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "Incomplete Credentials",
-                "Enter the VPN account and password."
+                tr("Incomplete Credentials"),
+                tr("Enter the VPN account and password.")
             );
             return false;
         }
@@ -637,8 +672,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "Incomplete Phone Number",
-                "Enter the country code and phone number."
+                tr("Incomplete Phone Number"),
+                tr("Enter the country code and phone number.")
             );
             return false;
         }
@@ -647,8 +682,8 @@ bool ConfigurationGuideDialog::validateCurrentPage()
         {
             QMessageBox::warning(
                 this,
-                "No Certificate Selected",
-                "Choose the P12 or PFX certificate file used to log in."
+                tr("No Certificate Selected"),
+                tr("Choose the P12 or PFX certificate file used to log in.")
             );
             return false;
         }
@@ -658,28 +693,27 @@ bool ConfigurationGuideDialog::validateCurrentPage()
 
 void ConfigurationGuideDialog::updateNavigation()
 {
-    static const QStringList titles{
-        "Choose Protocol",
-        "Configure Server",
-        "Choose Authentication Method",
-        "Enter Credentials"
+    // Built on every call, not once, so that they follow a language change.
+    const QStringList titles{
+        tr("Choose Protocol"),
+        tr("Configure Server"),
+        tr("Choose Authentication Method"),
+        tr("Enter Credentials")
     };
-    static const QStringList descriptions{
-        "Choose the access protocol your server actually uses.",
-        "Enter the address and port given by your VPN provider.",
-        "Choose the authentication method the server offers for your account.",
-        "Enter the login details this authentication method needs when connecting."
+    const QStringList descriptions{
+        tr("Choose the access protocol your server actually uses."),
+        tr("Enter the address and port given by your VPN provider."),
+        tr("Choose the authentication method the server offers for your account."),
+        tr("Enter the login details this authentication method needs when connecting.")
     };
 
     const int pageIndex = pages->currentIndex();
-    stepLabel->setText(
-        QString("Step %1 / %2").arg(pageIndex + 1).arg(pages->count())
-    );
+    stepLabel->setText(tr("Step %1 / %2").arg(pageIndex + 1).arg(pages->count()));
     titleLabel->setText(titles.value(pageIndex));
     descriptionLabel->setText(descriptions.value(pageIndex));
     backButton->setEnabled(pageIndex > 0);
     nextButton->setText(
-        pageIndex == pages->count() - 1 ? "Save" : "Next"
+        pageIndex == pages->count() - 1 ? tr("Save") : tr("Next")
     );
     updateProtocolPage();
 }
@@ -694,14 +728,26 @@ void ConfigurationGuideDialog::selectAuthenticationMethod(
     selectedLoginDomain = loginDomain;
     selectedLoginUrl = loginUrl;
 
-    QString details = "Selected: " + authenticationMethodName(selectedAuthType);
+    updateSelectedAuthentication();
+    updateCredentialsPage();
+}
+
+void ConfigurationGuideDialog::updateSelectedAuthentication()
+{
+    if (selectedAuthType.isEmpty())
+    {
+        selectedAuthenticationLabel->setText(tr("Selected: %1").arg(tr("Not selected")));
+        fetchAuthenticationButton->setText(tr("Fetch Authentication Methods"));
+        return;
+    }
+
+    QString details = tr("Selected: %1").arg(authenticationMethodName(selectedAuthType));
     if (!selectedLoginDomain.isEmpty())
     {
-        details += "\nLogin domain: " + selectedLoginDomain;
+        details += QLatin1Char('\n') + tr("Login domain: %1").arg(selectedLoginDomain);
     }
     selectedAuthenticationLabel->setText(details);
-    fetchAuthenticationButton->setText("Fetch Authentication Methods Again");
-    updateCredentialsPage();
+    fetchAuthenticationButton->setText(tr("Fetch Authentication Methods Again"));
 }
 
 QString ConfigurationGuideDialog::authenticationMethodName(
@@ -710,19 +756,19 @@ QString ConfigurationGuideDialog::authenticationMethodName(
 {
     if (authType == "psw")
     {
-        return "Username and password";
+        return tr("Username and password");
     }
     if (authType == "smsCheckCode")
     {
-        return "SMS code";
+        return tr("SMS code");
     }
     if (authType == "cas")
     {
-        return "CAS";
+        return QStringLiteral("CAS");
     }
     if (authType == "httpsOauth2")
     {
-        return "OAuth2";
+        return QStringLiteral("OAuth2");
     }
-    return authType.isEmpty() ? "Not selected" : authType;
+    return authType.isEmpty() ? tr("Not selected") : authType;
 }

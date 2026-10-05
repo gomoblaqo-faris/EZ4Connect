@@ -1,3 +1,4 @@
+#include <QEvent>
 #include <QFileInfo>
 #include <QFileDialog>
 #include <QDesktopServices>
@@ -36,7 +37,7 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 QUrl::fromLocalFile(ApplicationPaths::logDirectory())
             ))
         {
-            QMessageBox::warning(this, "Log Directory", "Could not open the log directory.");
+            QMessageBox::warning(this, tr("Log Directory"), tr("Could not open the log directory."));
         }
     });
 
@@ -86,7 +87,7 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->resetDefaultPushButton, &QPushButton::clicked,
         [&]()
         {
-            int status = QMessageBox::warning(this, "Warning", "This will reset all settings. Continue?", QMessageBox::Ok, QMessageBox::Cancel);
+            int status = QMessageBox::warning(this, tr("Warning"), tr("This will reset all settings. Continue?"), QMessageBox::Ok, QMessageBox::Cancel);
             if (status == QMessageBox::Ok)
             {
                 const bool secretsRemoved = ProfileSettings::forgetSecrets(*settings);
@@ -98,9 +99,9 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 {
                     QMessageBox::warning(
                         this,
-                        "Saved Passwords Not Removed",
-                        "The settings were reset, but the saved passwords could not be removed from "
-                        "the system credential store. Remove the EZ4Connect entries there by hand."
+                        tr("Saved Passwords Not Removed"),
+                        tr("The settings were reset, but the saved passwords could not be removed from "
+                           "the system credential store. Remove the EZ4Connect entries there by hand.")
                     );
                 }
             }
@@ -109,11 +110,11 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->importPushButton, &QPushButton::clicked,
             [&]()
             {
-                QString filename = QFileDialog::getOpenFileName(this, "Choose a Configuration File",
+                QString filename = QFileDialog::getOpenFileName(this, tr("Choose a Configuration File"),
                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                    "Config Ini(*.ini);;All Files(*.*)");
+                    tr("Configuration files (*.ini);;All files (*.*)"));
                 if (filename.isEmpty()) {
-                    QMessageBox::critical(this, "Error", "No configuration file selected. Nothing was changed.");
+                    QMessageBox::critical(this, tr("Error"), tr("No configuration file selected. Nothing was changed."));
                     return;
                 }
                 QSettings newSettings(filename, QSettings::IniFormat);
@@ -123,12 +124,11 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                 {
                     includeExtraArguments = QMessageBox::warning(
                         this,
-                        "Extra Core Arguments",
-                        "This file sets extra arguments for the VPN core:\n\n"
-                            + importedArguments
-                            + "\n\nThey are passed to the core as they are, and in TUN mode the core "
-                              "runs with administrator privileges. Only import them if you trust "
-                              "where the file came from.\n\nImport these arguments?",
+                        tr("Extra Core Arguments"),
+                        tr("This file sets extra arguments for the VPN core:\n\n%1\n\n"
+                           "They are passed to the core as they are, and in TUN mode the core "
+                           "runs with administrator privileges. Only import them if you trust "
+                           "where the file came from.\n\nImport these arguments?").arg(importedArguments),
                         QMessageBox::Yes | QMessageBox::No,
                         QMessageBox::No
                     ) == QMessageBox::Yes;
@@ -140,12 +140,12 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->exportPushButton, &QPushButton::clicked,
             [&]()
             {
-                QString filename = QFileDialog::getSaveFileName(this, "Choose Where to Save",
+                QString filename = QFileDialog::getSaveFileName(this, tr("Choose Where to Save"),
                     QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                    "Config Ini(*.ini);;All Files(*.*)");
+                    tr("Configuration files (*.ini);;All files (*.*)"));
                 if (filename.isEmpty())
                 {
-                    QMessageBox::critical(this, "Error", "No save location selected.");
+                    QMessageBox::critical(this, tr("Error"), tr("No save location selected."));
                     return;
                 }
                 settings->sync();
@@ -162,9 +162,9 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
                     exported.sync();
                     QMessageBox::information(
                         this,
-                        "Passwords Not Exported",
-                        "Saved passwords and other secrets are not part of the exported file. "
-                        "Enter them again after importing it."
+                        tr("Passwords Not Exported"),
+                        tr("Saved passwords and other secrets are not part of the exported file. "
+                           "Enter them again after importing it.")
                     );
                 }
             });
@@ -190,9 +190,9 @@ SettingWindow::SettingWindow(QWidget *parent, QSettings *inputSettings, const QS
     connect(ui->certFileBrowseButton, &QPushButton::clicked,
         [&]()
         {
-            QString filename = QFileDialog::getOpenFileName(this, "Choose a Certificate File",
+            QString filename = QFileDialog::getOpenFileName(this, tr("Choose a Certificate File"),
                 QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-                "P12 Certificate(*.p12 *.pfx);;All Files(*.*)");
+                tr("P12 certificates (*.p12 *.pfx);;All files (*.*)"));
             if (!filename.isEmpty())
             {
                 ui->certFileLineEdit->setText(filename);
@@ -241,13 +241,18 @@ bool SettingWindow::shouldCheckCredential()
         return !ui->certFileLineEdit->text().isEmpty();
 }
 
-void SettingWindow::loadSettings()
+void SettingWindow::updateConfigVersionLabel()
 {
     ui->configVersionLabel->setText(
-        "Profile config version: " + QString::number(ProfileSettings::read(*settings, ProfileSettings::ConfigVersion)) +
-        "\nApp config version: " +
-        QString::number(ApplicationConstants::ConfigVersion)
+        tr("Profile config version: %1\nApp config version: %2")
+            .arg(ProfileSettings::read(*settings, ProfileSettings::ConfigVersion))
+            .arg(ApplicationConstants::ConfigVersion)
     );
+}
+
+void SettingWindow::loadSettings()
+{
+    updateConfigVersionLabel();
     ui->usernameLineEdit->setText(ProfileSettings::read(*settings, ProfileSettings::Username));
     loadedPassword = ProfileSettings::read(*settings, ProfileSettings::Password);
     loadedTotpSecret = ProfileSettings::read(*settings, ProfileSettings::TOTPSecret);
@@ -367,9 +372,9 @@ void SettingWindow::applySettings()
             QMessageBox::critical(
                 this,
                 newAutoStart
-                    ? "Failed to Enable Launch at Login"
-                    : "Failed to Disable Launch at Login",
-                status.error
+                    ? tr("Failed to Enable Launch at Login")
+                    : tr("Failed to Disable Launch at Login"),
+                status.errorForDisplay()
             );
         }
     }
@@ -509,4 +514,14 @@ bool SettingWindow::isAuthSettingChanged()
             ui->loginUrlLineEdit->text() != ProfileSettings::read(*settings, ProfileSettings::LoginURL)) ||
            ui->serverAddressLineEdit->text() != ProfileSettings::read(*settings, ProfileSettings::ServerAddress) ||
            ui->serverPortSpinBox->value() != ProfileSettings::read(*settings, ProfileSettings::ServerPort);
+}
+
+void SettingWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+        updateConfigVersionLabel();
+    }
+    QDialog::changeEvent(event);
 }

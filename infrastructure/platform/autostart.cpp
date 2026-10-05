@@ -10,8 +10,18 @@
 #include <QStandardPaths>
 #include <QTextStream>
 
+#include "application/wording.h"
+
 namespace
 {
+// The source text is marked with QT_TRANSLATE_NOOP("AutoStart", ...) where it is
+// written, so that lupdate finds it.
+template <typename... Arguments>
+Wording text(const char *source, const Arguments &...arguments)
+{
+    return Wording::of("AutoStart", source, arguments...);
+}
+
 QString nativeApplicationPath()
 {
     return QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
@@ -106,7 +116,7 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     settings.sync();
     if (settings.status() != QSettings::NoError)
     {
-        return OperationStatus::failure("Could not update the startup entry in the registry.");
+        return OperationStatus::failure(text(QT_TRANSLATE_NOOP("AutoStart", "Could not update the startup entry in the registry.")));
     }
     return {};
 #elif defined(Q_OS_MACOS)
@@ -127,12 +137,12 @@ OperationStatus AutoStart::setEnabled(bool enabled)
         if (!enabled && process.error() != QProcess::UnknownError)
         {
             return OperationStatus::failure(
-                "Could not remove the login item: " + process.errorString()
+                text(QT_TRANSLATE_NOOP("AutoStart", "Could not remove the login item: %1"), process.errorString())
             );
         }
         if (!enabled && process.exitCode() != 0)
         {
-            return OperationStatus::failure("Could not remove the login item: " + error);
+            return OperationStatus::failure(text(QT_TRANSLATE_NOOP("AutoStart", "Could not remove the login item: %1"), error));
         }
     }
     if (enabled)
@@ -148,13 +158,14 @@ OperationStatus AutoStart::setEnabled(bool enabled)
         if (process.error() != QProcess::UnknownError)
         {
             return OperationStatus::failure(
-                "Could not create the login item: " + process.errorString()
+                text(QT_TRANSLATE_NOOP("AutoStart", "Could not create the login item: %1"), process.errorString())
             );
         }
         if (process.exitCode() != 0)
         {
             return OperationStatus::failure(
-                "Could not create the login item: " + process.readAllStandardError()
+                text(QT_TRANSLATE_NOOP("AutoStart", "Could not create the login item: %1"),
+                     QString::fromUtf8(process.readAllStandardError()))
             );
         }
     }
@@ -168,7 +179,7 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     if (directory.exists() && desktopFile.exists() && !desktopFile.remove())
     {
         return OperationStatus::failure(
-            "Could not remove the .desktop file: " + desktopFile.fileName()
+            text(QT_TRANSLATE_NOOP("AutoStart", "Could not remove the .desktop file: %1"), desktopFile.fileName())
         );
     }
     if (!enabled)
@@ -178,13 +189,13 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     if (!directory.exists() && !directory.mkpath("."))
     {
         return OperationStatus::failure(
-            "Could not create the autostart directory: " + directoryPath
+            text(QT_TRANSLATE_NOOP("AutoStart", "Could not create the autostart directory: %1"), directoryPath)
         );
     }
     if (!desktopFile.open(QIODevice::WriteOnly | QIODevice::Text))
     {
         return OperationStatus::failure(
-            "Could not create the .desktop file: " + desktopFile.fileName()
+            text(QT_TRANSLATE_NOOP("AutoStart", "Could not create the .desktop file: %1"), desktopFile.fileName())
         );
     }
 
@@ -198,12 +209,12 @@ OperationStatus AutoStart::setEnabled(bool enabled)
     if (output.status() != QTextStream::Ok || !desktopFile.flush())
     {
         return OperationStatus::failure(
-            "Could not write the .desktop file: " + desktopFile.fileName()
+            text(QT_TRANSLATE_NOOP("AutoStart", "Could not write the .desktop file: %1"), desktopFile.fileName())
         );
     }
     return {};
 #else
     Q_UNUSED(enabled)
-    return OperationStatus::failure("Launch at login is not supported on this platform.");
+    return OperationStatus::failure(text(QT_TRANSLATE_NOOP("AutoStart", "Launch at login is not supported on this platform.")));
 #endif
 }

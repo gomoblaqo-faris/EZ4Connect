@@ -115,7 +115,7 @@ ConnectionFlow::ConnectionFlow(
             this, &ConnectionFlow::handleFinished);
 
     connect(systemProxySession, &SystemProxySession::operationFailed, this,
-            [this](const QString &error)
+            [this](const QString &error, const QString &translatedError)
             {
                 // Do not retry a proxy that could not be set on every reconnect.
                 if (!this->systemProxySession->isEnabled())
@@ -123,7 +123,7 @@ ConnectionFlow::ConnectionFlow(
                     proxyWanted = false;
                 }
                 qWarning().noquote() << error;
-                emit proxyFailed(error);
+                emit proxyFailed(translatedError);
             });
     // A proxy that finished being set after the session ended has nothing
     // listening behind it.
@@ -455,32 +455,34 @@ void ConnectionFlow::enableSystemProxy()
 
 QString ConnectionFlow::describe(ZJU_ERROR error)
 {
+    // Translated in the graphical app; the command-line client installs no
+    // translator, so it gets this English text.
     switch (error)
     {
     case ZJU_ERROR::INVALID_DETAIL:
-        return "Login failed!\nCheck that the account and password are correct.";
+        return tr("Login failed!\nCheck that the account and password are correct.");
     case ZJU_ERROR::BRUTE_FORCE:
-        return "Login failed!\nToo many login attempts; this IP has been blocked. Try again later or switch to EasyConnect.";
+        return tr("Login failed!\nToo many login attempts; this IP has been blocked. Try again later or switch to EasyConnect.");
     case ZJU_ERROR::OTHER_LOGIN_FAILED:
-        return "Login failed!\nUnknown reason. You can send the log to the developer for investigation.";
+        return tr("Login failed!\nUnknown reason. You can send the log to the developer for investigation.");
     case ZJU_ERROR::ACCESS_DENIED:
-        return "Insufficient privileges!\nRun the program again with administrator privileges.";
+        return tr("Insufficient privileges!\nRun the program again with administrator privileges.");
     case ZJU_ERROR::LISTEN_FAILED:
-        return "Failed to listen!\nClose the program using the port (such as a leftover zju-connect process), or use a different port.";
+        return tr("Failed to listen!\nClose the program using the port (such as a leftover zju-connect process), or use a different port.");
     case ZJU_ERROR::CLIENT_FAILED:
-        return "Connection failed!\nThe request may have timed out. Check your local network and the server settings.";
+        return tr("Connection failed!\nThe request may have timed out. Check your local network and the server settings.");
     case ZJU_ERROR::CAPTCHA_FAILED:
-        return "Login failed!\nCaptcha problem: the code may have expired or been incorrect.";
+        return tr("Login failed!\nCaptcha problem: the code may have expired or been incorrect.");
     case ZJU_ERROR::PROGRAM_NOT_FOUND:
-        return "Core not found!\nCheck that the zju-connect core is in the same folder as the program.";
+        return tr("Core not found!\nCheck that the zju-connect core is in the same folder as the program.");
     case ZJU_ERROR::INTERACTIVE_ERROR:
-        return "Login failed!\nCheck that your input was correct and that the SSO login was completed.";
+        return tr("Login failed!\nCheck that your input was correct and that the SSO login was completed.");
     case ZJU_ERROR::AUTH_NOT_AVAILABLE:
-        return "Authentication method or login domain unavailable!\nFetch the authentication methods the server offers and choose one of them.";
+        return tr("Authentication method or login domain unavailable!\nFetch the authentication methods the server offers and choose one of them.");
     case ZJU_ERROR::AUTH_EXPIRED:
-        return "Authentication expired!\nPlease log in again.";
+        return tr("Authentication expired!\nPlease log in again.");
     case ZJU_ERROR::OTHER:
-        return "Other error!\nUnknown reason. You can send the log to the developer for investigation.";
+        return tr("Other error!\nUnknown reason. You can send the log to the developer for investigation.");
     case ZJU_ERROR::NONE:
         return {};
     }

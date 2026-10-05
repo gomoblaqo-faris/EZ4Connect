@@ -16,6 +16,7 @@
 #include "presentation/dialogs/loginwindow/loginwindow.h"
 #include "presentation/dialogs/ssologinwebview/ssologinwebview.h"
 #include "presentation/dialogs/sudowindow/sudowindow.h"
+#include "presentation/presentationhelpers.h"
 
 AuthDialogCoordinator::AuthDialogCoordinator(QWidget *parentWidget, QObject *parent)
     : AuthPrompter(parent),
@@ -59,27 +60,37 @@ void AuthDialogCoordinator::requestPhoneNumber(
     phoneNumberDialog = dialog;
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowModality(Qt::WindowModal);
-    dialog->setWindowTitle("SMS Verification");
 
     auto *layout = new QVBoxLayout(dialog);
-    layout->addWidget(new QLabel("Enter the phone number that will receive the code:", dialog));
+    auto *promptLabel = new QLabel(dialog);
+    layout->addWidget(promptLabel);
 
     auto *phoneLayout = new QHBoxLayout;
     phoneLayout->addWidget(new QLabel("+", dialog));
     auto *countryCodeEdit = new QLineEdit(countryCode, dialog);
     countryCodeEdit->setObjectName("countryCodeLineEdit");
     countryCodeEdit->setMaximumWidth(60);
-    countryCodeEdit->setPlaceholderText("Code");
     phoneLayout->addWidget(countryCodeEdit);
     phoneLayout->addWidget(new QLabel("-", dialog));
     auto *phoneNumberEdit = new QLineEdit(phoneNumber, dialog);
     phoneNumberEdit->setObjectName("phoneNumberLineEdit");
-    phoneNumberEdit->setPlaceholderText("Phone number");
     phoneLayout->addWidget(phoneNumberEdit);
     layout->addLayout(phoneLayout);
 
-    auto *saveCheckBox = new QCheckBox("Remember phone number (can be removed in Settings)", dialog);
+    auto *saveCheckBox = new QCheckBox(dialog);
     layout->addWidget(saveCheckBox);
+
+    PresentationHelpers::translateWith(
+        dialog,
+        [dialog, promptLabel, countryCodeEdit, phoneNumberEdit, saveCheckBox]()
+        {
+            dialog->setWindowTitle(tr("SMS Verification"));
+            promptLabel->setText(tr("Enter the phone number that will receive the code:"));
+            countryCodeEdit->setPlaceholderText(tr("Code"));
+            phoneNumberEdit->setPlaceholderText(tr("Phone number"));
+            saveCheckBox->setText(tr("Remember phone number (can be removed in Settings)"));
+        }
+    );
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
@@ -97,8 +108,8 @@ void AuthDialogCoordinator::requestPhoneNumber(
             {
                 QMessageBox::warning(
                     dialog,
-                    "Warning",
-                    "The country code and phone number are required."
+                    tr("Warning"),
+                    tr("The country code and phone number are required.")
                 );
                 return;
             }
@@ -180,17 +191,24 @@ void AuthDialogCoordinator::requestSmsCode(bool showSkipSecondaryAuthOption)
     qInfo().noquote() << "SMS code required";
 
     QDialog dialog(parentWidget);
-    dialog.setWindowTitle("SMS Code");
 
     auto *layout = new QVBoxLayout(&dialog);
-    layout->addWidget(new QLabel("Enter the SMS code:", &dialog));
+    auto *promptLabel = new QLabel(&dialog);
+    layout->addWidget(promptLabel);
 
     auto *codeEdit = new QLineEdit(&dialog);
     layout->addWidget(codeEdit);
 
-    auto *skipCheckBox = new QCheckBox("Skip SMS verification in future", &dialog);
+    auto *skipCheckBox = new QCheckBox(&dialog);
     skipCheckBox->setVisible(showSkipSecondaryAuthOption);
     layout->addWidget(skipCheckBox);
+
+    PresentationHelpers::translateWith(&dialog, [&dialog, promptLabel, skipCheckBox]()
+    {
+        dialog.setWindowTitle(tr("SMS Code"));
+        promptLabel->setText(tr("Enter the SMS code:"));
+        skipCheckBox->setText(tr("Skip SMS verification in future"));
+    });
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
@@ -224,17 +242,24 @@ void AuthDialogCoordinator::requestRadiusCode(bool showSkipSecondaryAuthOption)
     qInfo().noquote() << "RADIUS token (SMS code) required";
 
     QDialog dialog(parentWidget);
-    dialog.setWindowTitle("RADIUS Token");
 
     auto *layout = new QVBoxLayout(&dialog);
-    layout->addWidget(new QLabel("Enter the SMS code you received (RADIUS token):", &dialog));
+    auto *promptLabel = new QLabel(&dialog);
+    layout->addWidget(promptLabel);
 
     auto *codeEdit = new QLineEdit(&dialog);
     layout->addWidget(codeEdit);
 
-    auto *skipCheckBox = new QCheckBox("Skip secondary authentication in future", &dialog);
+    auto *skipCheckBox = new QCheckBox(&dialog);
     skipCheckBox->setVisible(showSkipSecondaryAuthOption);
     layout->addWidget(skipCheckBox);
+
+    PresentationHelpers::translateWith(&dialog, [&dialog, promptLabel, skipCheckBox]()
+    {
+        dialog.setWindowTitle(tr("RADIUS Token"));
+        promptLabel->setText(tr("Enter the SMS code you received (RADIUS token):"));
+        skipCheckBox->setText(tr("Skip secondary authentication in future"));
+    });
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
@@ -269,8 +294,8 @@ void AuthDialogCoordinator::requestTotpCode()
     bool accepted = false;
     const QString totp = QInputDialog::getText(
         parentWidget,
-        "TOTP Code",
-        "Enter the TOTP code:",
+        tr("TOTP Code"),
+        tr("Enter the TOTP code:"),
         QLineEdit::Normal,
         "",
         &accepted
@@ -311,13 +336,13 @@ AuthPrompter::ProxyOverwriteAnswer AuthDialogCoordinator::askProxyOverwrite()
 {
     QMessageBox messageBox(
         QMessageBox::Warning,
-        "Warning",
-        "A system proxy is already configured (possibly by Clash or another proxy app).\n"
-        "Overwrite the current system proxy settings?",
+        tr("Warning"),
+        tr("A system proxy is already configured (possibly by Clash or another proxy app).\n"
+           "Overwrite the current system proxy settings?"),
         QMessageBox::Yes | QMessageBox::No,
         parentWidget
     );
-    auto *dontShowCheckBox = new QCheckBox("Don't ask again");
+    auto *dontShowCheckBox = new QCheckBox(tr("Don't ask again"));
     messageBox.setCheckBox(dontShowCheckBox);
 
     ProxyOverwriteAnswer answer;

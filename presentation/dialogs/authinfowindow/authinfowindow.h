@@ -18,7 +18,26 @@ public:
 signals:
 	void finishAuthInfo(const QString& authType, const QString& loginDomain, const QString& loginUrl);
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
+    enum class Status
+    {
+        Fetching,
+        FetchFailed,
+        InvalidReply,
+        NoMethods,
+        ChooseMethod,
+        CoreFailed
+    };
+
+    void setStatus(Status newStatus);
+    void showStatus();
+    static QString itemText(const QListWidgetItem *item);
+
+    Status status = Status::Fetching;
+
 	Ui::AuthInfoWindow *ui;
     QProcess *proc_ = nullptr;
     QByteArray stdoutBuf_;

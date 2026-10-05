@@ -46,8 +46,13 @@ public:
     // back on after a reconnect.
     void clearSystemProxy();
 
+    // Sets the text this controller puts on the buttons again, in the
+    // current language.
+    void retranslate();
+
 private:
     void handleConnectClicked();
+    void updateConnectText();
     void showObstacle(ConnectionFlow::Obstacle obstacle);
 
     QWidget *parentWidget;
@@ -58,6 +63,7 @@ private:
     ConnectionSession *connectionSession;
     SettingsProvider settingsProvider;
     NotificationHandler notificationHandler;
+    bool connectionRunning = false;
 };
 
 #endif // CONNECTIONUICONTROLLER_H

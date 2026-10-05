@@ -1,6 +1,8 @@
 #include "extrasettingwindow.h"
 #include "ui_extrasettingwindow.h"
 
+#include <QEvent>
+
 ExtraSettingWindow::ExtraSettingWindow(QDialog *parent) :
     QDialog(parent),
     ui(new Ui::ExtraSettingWindow)
@@ -122,4 +124,13 @@ void ExtraSettingWindow::setup(const QString& tcpPortForwarding, const QString& 
 	}
 
 	ui->extraArgTextEdit->setPlainText(extraArguments);
+}
+
+void ExtraSettingWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+    }
+    QDialog::changeEvent(event);
 }

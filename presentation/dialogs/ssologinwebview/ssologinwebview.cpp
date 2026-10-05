@@ -2,6 +2,7 @@
 #include "ui_ssologinwebview.h"
 
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QLineEdit>
 #include <QToolButton>
 #include <QWebEngineHistory>
@@ -126,4 +127,13 @@ void SsoLoginWebView::closeEvent(QCloseEvent *event)
     }
 
     QDialog::closeEvent(event);
+}
+
+void SsoLoginWebView::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+    }
+    QDialog::changeEvent(event);
 }

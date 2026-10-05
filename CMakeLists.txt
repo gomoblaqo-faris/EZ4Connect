@@ -303,6 +303,7 @@ if(BUILD_TESTING)
     ez4connect_test(settingsprofileloader_test)
     ez4connect_test(systemproxysession_test)
     ez4connect_test(updatechecker_test)
+    ez4connect_test(wording_test)
 
     # The stand-in cores are shell scripts.
     if(UNIX)
@@ -352,5 +353,29 @@ if(BUILD_TESTING)
         presentation/language/languagemenu.cpp
     )
     ez4connect_add_translations(languagemenu_test)
+
+    ez4connect_gui_test(retranslation_test
+        presentation/main/mainwindow.cpp
+        presentation/main/mainwindowcoordinator.cpp
+        presentation/coordinators/connectionuicontroller.cpp
+        presentation/language/languagemanager.cpp
+        presentation/language/languagemenu.cpp
+        resource.qrc
+        presentation/coordinators/authdialogcoordinator.cpp
+        presentation/dialogs/authinfowindow/authinfowindow.cpp
+        presentation/dialogs/configurationguidedialog/configurationguidedialog.cpp
+        presentation/dialogs/extrasettingwindow/extrasettingwindow.cpp
+        presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
+        presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
+        presentation/dialogs/loginwindow/loginwindow.cpp
+        presentation/dialogs/settingwindow/settingwindow.cpp
+        presentation/dialogs/ssologinwebview/ssologinwebview.cpp
+        presentation/dialogs/sudowindow/sudowindow.cpp
+        presentation/presentationhelpers.cpp
+    )
+    target_link_libraries(retranslation_test PRIVATE Qt::WebEngineWidgets)
+    target_compile_definitions(retranslation_test PRIVATE
+        EZ4CONNECT_TRANSLATION_FILE="${CMAKE_CURRENT_SOURCE_DIR}/translations/ez4connect_zh_CN.ts"
+    )
     endif() # EZ4CONNECT_BUILD_GUI
 endif()

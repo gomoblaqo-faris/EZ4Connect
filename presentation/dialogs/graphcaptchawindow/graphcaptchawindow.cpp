@@ -2,6 +2,7 @@
 
 #include "captchacanvas.h"
 
+#include <QEvent>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -52,7 +53,7 @@ void GraphCaptchaWindow::accept()
 {
     if (ui->canvas->image().isNull())
     {
-        QMessageBox::warning(this, "Captcha", "The captcha image failed to load. Please try connecting again.");
+        QMessageBox::warning(this, tr("Captcha"), tr("The captcha image failed to load. Please try connecting again."));
         return;
     }
 
@@ -61,7 +62,7 @@ void GraphCaptchaWindow::accept()
         const QString code = ui->codeEdit->text().trimmed();
         if (code.isEmpty())
         {
-            QMessageBox::warning(this, "Captcha", "Enter the characters shown in the image.");
+            QMessageBox::warning(this, tr("Captcha"), tr("Enter the characters shown in the image."));
             ui->codeEdit->setFocus();
             return;
         }
@@ -91,4 +92,13 @@ void GraphCaptchaWindow::reject()
 {
     emit cancelled();
     QDialog::reject();
+}
+
+void GraphCaptchaWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+    }
+    QDialog::changeEvent(event);
 }

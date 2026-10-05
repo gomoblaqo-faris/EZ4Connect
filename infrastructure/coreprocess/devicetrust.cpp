@@ -1,11 +1,13 @@
 #include "devicetrust.h"
 
+#include <QCoreApplication>
 #include <QProcess>
 
 #include <stdexcept>
 
 #include "infrastructure/coreprocess/coreexecutable.h"
 #include "infrastructure/storage/applicationpaths.h"
+
 
 void DeviceTrust::set(
     QObject *parent,
@@ -18,7 +20,7 @@ void DeviceTrust::set(
 {
     if (protocol != "atrust")
     {
-        throw std::runtime_error("Trusted devices are only supported with aTrust");
+        throw std::runtime_error(QT_TRANSLATE_NOOP("DeviceTrust", "Trusted devices are only supported with aTrust"));
     }
 
     QStringList arguments;
@@ -41,15 +43,16 @@ void DeviceTrust::set(
     process.start(CoreExecutable::path(), arguments);
     if (!process.waitForStarted(5000))
     {
-        throw std::runtime_error("Failed to start the core");
+        throw std::runtime_error(QT_TRANSLATE_NOOP("DeviceTrust", "Failed to start the core"));
     }
     if (!process.waitForFinished(30000))
     {
         process.kill();
         process.waitForFinished(1000);
-        throw std::runtime_error("The core timed out");
+        throw std::runtime_error(QT_TRANSLATE_NOOP("DeviceTrust", "The core timed out"));
     }
 
+    // The core's own words, not translated: this is what it prints.
     const QByteArray errorOutput = process.readAllStandardError();
     const QByteArray expected =
         trusted ? QByteArray("Device trusted successfully")
@@ -58,4 +61,10 @@ void DeviceTrust::set(
     {
         throw std::runtime_error(errorOutput);
     }
+}
+
+QString DeviceTrust::describeFailure(const char *message)
+{
+    // The core's own output has no translation and comes back as it is.
+    return QCoreApplication::translate("DeviceTrust", message);
 }

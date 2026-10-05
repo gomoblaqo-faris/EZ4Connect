@@ -4,6 +4,7 @@
 #include "infrastructure/coreprocess/consoleoutputdecoder.h"
 #include "infrastructure/coreprocess/coreexecutable.h"
 
+#include <QEvent>
 #include <QMetaEnum>
 
 #include <QDebug>
@@ -75,13 +76,13 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
                 if (jsonError.error != QJsonParseError::NoError)
                 {
                     qWarning().noquote() << "Failed to parse authentication methods: " + jsonError.errorString();
-                    ui->label->setText("Failed to fetch authentication methods. Check the server details and try again.");
+                    setStatus(Status::FetchFailed);
                     return;
                 }
                 if (!doc.isArray())
                 {
                     qWarning().noquote() << "Failed to parse authentication methods: the response is not a list";
-                    ui->label->setText("The server did not return a valid list of authentication methods.");
+                    setStatus(Status::InvalidReply);
                     return;
                 }
                 QJsonArray arr = doc.array();
@@ -91,24 +92,21 @@ AuthInfoWindow::AuthInfoWindow(QWidget *parent)
                     QString authType = obj.value("authType").toString();
                     QString loginDomain = obj.value("loginDomain").toString();
                     QString loginUrl = obj.value("loginUrl").toString();
-                    QListWidgetItem *item =
-                        new QListWidgetItem(QString("%1 - %2 - %3 - %4").arg(authName, authType, loginDomain, loginUrl.isEmpty()? "none" : loginUrl));
+                    auto *item = new QListWidgetItem();
                     item->setData(Qt::UserRole, authType);
                     item->setData(Qt::UserRole + 1, loginDomain);
                     item->setData(Qt::UserRole + 2, loginUrl);
+                    item->setData(Qt::UserRole + 3, authName);
+                    item->setText(itemText(item));
                     ui->authInfoListWidget->addItem(item);
                 }
-                ui->label->setText(
-                    arr.isEmpty()
-                        ? "The server returned no authentication methods."
-                        : "Choose an authentication method:"
-                );
+                setStatus(arr.isEmpty() ? Status::NoMethods : Status::ChooseMethod);
             });
     connect(proc_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         qWarning().noquote()
             << QString("Failed to fetch authentication methods: ")
                    + QMetaEnum::fromType<QProcess::ProcessError>().valueToKey(error);
-        ui->label->setText("Failed to fetch authentication methods. Check the core executable and the server details.");
+        setStatus(Status::CoreFailed);
     });
 }
 
@@ -123,8 +121,65 @@ void AuthInfoWindow::fetchAuthInfo(const QString& serverAddress, int port)
     stderrBuf_.clear();
     ui->authInfoListWidget->clear();
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
-    ui->label->setText("Fetching authentication methods, please wait...");
+    setStatus(Status::Fetching);
     proc_->start(CoreExecutable::path(),
                  {"-protocol", "atrust", "-server", serverAddress, "-port", QString::number(port), "-auth-info"});
     qInfo().noquote() << "Fetching available authentication methods...";
+}
+
+void AuthInfoWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::LanguageChange)
+    {
+        ui->retranslateUi(this);
+        showStatus();
+        for (int row = 0; row < ui->authInfoListWidget->count(); ++row)
+        {
+            QListWidgetItem *item = ui->authInfoListWidget->item(row);
+            item->setText(itemText(item));
+        }
+    }
+    QDialog::changeEvent(event);
+}
+
+void AuthInfoWindow::setStatus(Status newStatus)
+{
+    status = newStatus;
+    showStatus();
+}
+
+void AuthInfoWindow::showStatus()
+{
+    switch (status)
+    {
+    case Status::Fetching:
+        ui->label->setText(tr("Fetching authentication methods, please wait..."));
+        break;
+    case Status::FetchFailed:
+        ui->label->setText(tr("Failed to fetch authentication methods. Check the server details and try again."));
+        break;
+    case Status::InvalidReply:
+        ui->label->setText(tr("The server did not return a valid list of authentication methods."));
+        break;
+    case Status::NoMethods:
+        ui->label->setText(tr("The server returned no authentication methods."));
+        break;
+    case Status::ChooseMethod:
+        ui->label->setText(tr("Choose an authentication method:"));
+        break;
+    case Status::CoreFailed:
+        ui->label->setText(tr("Failed to fetch authentication methods. Check the core executable and the server details."));
+        break;
+    }
+}
+
+QString AuthInfoWindow::itemText(const QListWidgetItem *item)
+{
+    const QString loginUrl = item->data(Qt::UserRole + 2).toString();
+    return QStringLiteral("%1 - %2 - %3 - %4").arg(
+        item->data(Qt::UserRole + 3).toString(),
+        item->data(Qt::UserRole).toString(),
+        item->data(Qt::UserRole + 1).toString(),
+        loginUrl.isEmpty() ? tr("none") : loginUrl
+    );
 }
